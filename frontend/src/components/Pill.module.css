@@ -1,0 +1,29 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+/* All three carry ink-coloured text. White on lime or ochre fails AA. */
+.lime   { background: var(--c-lime-soft);   color: var(--c-moss-dark); border-color: var(--c-lime); }
+.ochre  { background: var(--c-ochre-soft);  color: #7A5510;            border-color: var(--c-ochre); }
+.grey   { background: var(--c-paper);       color: var(--c-muted);     border-color: var(--c-border); }
+.danger { background: var(--c-danger-soft); color: var(--c-danger);    border-color: #E0B6AE; }
+
+.removable { cursor: pointer; }
+
+.remove {
+  background: none;
+  border: 0;
+  padding: 0 0 0 2px;
+  font-size: 13px;
+  line-height: 1;
+  color: inherit;
+  cursor: pointer;
+}

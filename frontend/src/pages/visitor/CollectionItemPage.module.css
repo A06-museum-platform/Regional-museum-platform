@@ -1,0 +1,62 @@
+.crumbs {
+  font-size: var(--fs-xs);
+  color: var(--c-muted);
+  margin-bottom: var(--s-4);
+}
+
+.crumbs a { color: var(--c-muted); }
+.crumbs a:hover { color: var(--c-moss); }
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-6);
+  align-items: start;
+}
+
+.image {
+  height: 340px;
+  border-radius: var(--radius);
+}
+
+.pills { display: flex; gap: var(--s-2); margin-bottom: var(--s-3); }
+
+.title { font-size: 26px; margin-bottom: var(--s-3); }
+
+.description { color: var(--c-muted); max-width: 52ch; }
+
+/* Every row here maps to a column in the collection_items table. If you add a
+   row, the column has to exist first — this table is the contract between the
+   visitor page, the staff editor and the database. */
+.facts { width: 100%; border-collapse: collapse; font-size: 14px; }
+
+.facts th {
+  text-align: left;
+  font-weight: 400;
+  color: var(--c-muted);
+  width: 40%;
+  padding: 9px 0;
+  border-top: 1px solid var(--c-border);
+  vertical-align: top;
+}
+
+.facts td { padding: 9px 0; border-top: 1px solid var(--c-border); }
+.facts tr:last-child th,
+.facts tr:last-child td { border-bottom: 1px solid var(--c-border); }
+
+.actions { display: flex; gap: var(--s-3); margin-top: var(--s-5); flex-wrap: wrap; }
+
+.related { margin-top: var(--s-7); }
+
+.relatedGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--s-5);
+}
+
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; gap: var(--s-5); }
+  .image { height: 220px; }
+  .title { font-size: var(--fs-lg); }
+  .actions > * { flex: 1; }
+}

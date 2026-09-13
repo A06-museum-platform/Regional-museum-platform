@@ -1,0 +1,38 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 18px;
+  min-height: var(--tap-min);
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 120ms ease;
+}
+
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* primary */
+.primary { background: var(--c-moss); color: var(--c-white); }
+.primary:hover:not(:disabled) { background: var(--c-moss-dark); }
+
+/* ghost */
+.ghost {
+  background: var(--c-white);
+  color: var(--c-ink);
+  border-color: var(--c-border);
+}
+.ghost:hover:not(:disabled) { background: var(--c-paper); }
+
+/* danger — destructive actions only (revoke, cancel, delete) */
+.danger { background: var(--c-danger); color: var(--c-white); }
+.danger:hover:not(:disabled) { filter: brightness(0.9); }
+
+/* size */
+.sm { padding: 6px 12px; font-size: var(--fs-sm); min-height: 34px; }
+.full { width: 100%; }
