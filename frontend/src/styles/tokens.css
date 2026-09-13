@@ -1,0 +1,57 @@
+/* ==========================================================================
+   SARHN design tokens
+   Colour is drawn from the collection itself: malachite green (the copper
+   carbonate on the Burra mineral exhibit) with ochre from the mallee country.
+   Contrast ratios below are measured, not estimated. If you need a colour
+   that is not here, raise it with Harbor rather than inventing one.
+   ========================================================================== */
+
+:root {
+  /* --- colour ------------------------------------------------------------ */
+  --c-ink:          #1E2A17;  /* body text.             13.7:1 on paper      */
+  --c-moss:         #4C6B1F;  /* primary action.         6.1:1 w/ white text */
+  --c-moss-dark:    #3B5417;  /* hover, admin nav.       8.5:1 w/ white text */
+  --c-lime:         #B9D14A;  /* FILL ONLY. ink text on top is 8.8:1         */
+  --c-ochre:        #C08A1E;  /* borders, badges. ink text on top is 4.9:1   */
+  --c-paper:        #F4F5EC;  /* page ground                                 */
+  --c-white:        #FFFFFF;
+  --c-muted:        #5D6650;  /* secondary text.         5.5:1 on paper      */
+  --c-border:       #D7DCC3;
+  --c-danger:       #A32F1F;  /* 7.0:1 with white text                       */
+  --c-ok:           #3E7A33;  /* 5.2:1 with white text                       */
+
+  --c-lime-soft:    #EDF3D4;
+  --c-ochre-soft:   #F7EDD3;
+  --c-danger-soft:  #F7E3DF;
+
+  /* NEVER put white text on --c-lime (1.7:1) or --c-ochre (3.1:1).
+     Both fail WCAG AA and will be picked up in usability testing.           */
+
+  /* --- type -------------------------------------------------------------- */
+  --font-display: Bitter, Georgia, serif;        /* headings only            */
+  --font-body:    Archivo, system-ui, sans-serif;
+
+  --fs-xl:   30px;
+  --fs-lg:   22px;
+  --fs-md:   17px;
+  --fs-base: 15px;   /* minimum body size — audience includes ages 10-14     */
+  --fs-sm:   13px;
+  --fs-xs:   12px;
+
+  /* --- spacing ----------------------------------------------------------- */
+  --s-1:  4px;
+  --s-2:  8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  24px;
+  --s-6:  32px;
+  --s-7:  48px;
+
+  /* --- other ------------------------------------------------------------- */
+  --radius:     6px;
+  --tap-min:    44px;     /* minimum tap target below the breakpoint         */
+  --shell-max:  1180px;
+}
+
+/* One breakpoint only: 768px. Do not add others without agreeing it first —
+   every extra breakpoint is another set of states to test.                  */
