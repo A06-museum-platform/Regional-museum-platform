@@ -3,6 +3,8 @@ import VisitorLayout from '../layouts/VisitorLayout';
 import HomePage from '../pages/visitor/HomePage';
 import CollectionsPage from '../pages/visitor/CollectionsPage';
 import CollectionItemPage from '../pages/visitor/CollectionItemPage';
+import EventsPage from '../pages/visitor/EventsPage';
+import EventDetailPage from '../pages/visitor/EventDetailPage';
 import PlaceholderPage from '../pages/PlaceholderPage';
 import NotFoundPage from '../pages/NotFoundPage';
 
@@ -26,8 +28,8 @@ export default function AppRoutes() {
         <Route path="collections" element={<CollectionsPage />} />
         <Route path="collections/:slug" element={<CollectionItemPage />} />
 
-        <Route path="events" element={<PlaceholderPage title="Events" />} />
-        <Route path="events/:slug" element={<PlaceholderPage title="Event" />} />
+        <Route path="events" element={<EventsPage />} />
+        <Route path="events/:slug" element={<EventDetailPage />} />
 
         <Route path="membership" element={<PlaceholderPage title="Membership" />} />
 
