@@ -1,0 +1,15 @@
+.block {
+  background: var(--c-border);
+  border-radius: var(--radius);
+  opacity: 0.55;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 0.65; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block { animation: none; opacity: 0.45; }
+}

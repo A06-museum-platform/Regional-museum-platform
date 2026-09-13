@@ -1,0 +1,124 @@
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- header ------------------------------------------------------------- */
+.header {
+  background: var(--c-white);
+  border-bottom: 1px solid var(--c-border);
+}
+
+.headerInner {
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  padding: var(--s-3) var(--s-5);
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-md);
+  color: var(--c-moss);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.nav {
+  display: flex;
+  gap: var(--s-5);
+  flex: 1;
+}
+
+.navLink {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--c-ink);
+  text-decoration: none;
+  padding-bottom: 3px;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+
+.navLink:hover { border-bottom-color: var(--c-border); }
+.navLinkActive { border-bottom-color: var(--c-moss); }
+
+.search {
+  width: 180px;
+  padding: 7px 10px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--c-ink);
+}
+
+.actions { display: flex; gap: var(--s-2); }
+
+/* Hamburger is hidden on desktop and only appears below the breakpoint. */
+.menuToggle { display: none; }
+
+/* --- main + footer ------------------------------------------------------ */
+.main {
+  flex: 1;
+  max-width: var(--shell-max);
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--s-6) var(--s-5);
+}
+
+.footer {
+  background: var(--c-ink);
+  color: #B8C2A8;
+  font-size: var(--fs-sm);
+}
+
+.footerInner {
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  padding: var(--s-6) var(--s-5);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-5);
+  justify-content: space-between;
+}
+
+.footer a { color: var(--c-lime); }
+
+/* --- the one breakpoint ------------------------------------------------- */
+@media (max-width: 768px) {
+  .headerInner { flex-wrap: wrap; gap: var(--s-3); }
+  .menuToggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    width: var(--tap-min);
+    height: var(--tap-min);
+    background: none;
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius);
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .nav {
+    order: 3;
+    flex-basis: 100%;
+    flex-direction: column;
+    gap: 0;
+  }
+  .navClosed { display: none; }
+  .navLink {
+    padding: var(--s-3) 0;
+    border-bottom: 1px solid var(--c-border);
+    min-height: var(--tap-min);
+  }
+  .search { order: 4; flex-basis: 100%; width: 100%; min-height: var(--tap-min); }
+  .actions { order: 5; flex-basis: 100%; }
+  .actions > * { flex: 1; }
+  .main { padding: var(--s-5) var(--s-4); }
+}

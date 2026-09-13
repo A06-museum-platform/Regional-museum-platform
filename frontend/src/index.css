@@ -1,0 +1,44 @@
+@import './styles/tokens.css';
+@import './styles/controls.css';
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--c-paper);
+  color: var(--c-ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  line-height: 1.2;
+  margin: 0 0 var(--s-3);
+}
+
+h1 { font-size: var(--fs-xl); }
+h2 { font-size: var(--fs-lg); }
+h3 { font-size: var(--fs-md); }
+
+p { margin: 0 0 var(--s-4); max-width: 68ch; }
+
+a { color: var(--c-moss); }
+
+img { max-width: 100%; display: block; }
+
+/* Keyboard focus must stay visible. It is part of the accessibility evidence
+   for the Week 9 usability evaluation, so do not remove this rule.          */
+:focus-visible {
+  outline: 3px solid var(--c-ochre);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

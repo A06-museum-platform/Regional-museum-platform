@@ -1,0 +1,23 @@
+.wrap {
+  text-align: center;
+  padding: var(--s-7) var(--s-5);
+  background: var(--c-white);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+}
+
+.title { margin-bottom: var(--s-2); }
+
+.body {
+  margin: 0 auto var(--s-5);
+  max-width: 48ch;
+  color: var(--c-muted);
+  font-size: 14px;
+}
+
+.actions {
+  display: flex;
+  gap: var(--s-2);
+  justify-content: center;
+  flex-wrap: wrap;
+}
