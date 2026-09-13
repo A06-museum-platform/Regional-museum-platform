@@ -225,3 +225,30 @@ export const COLLECTION_ITEMS = [
     status: 'published',
   },
 ];
+
+/**
+ * Minimal exhibition records, enough to resolve the "Part of" link on an item
+ * detail page.
+ *
+ * CONTRACT NOTE: the list endpoint returns `exhibition_id` only, but the
+ * detail endpoint must return a nested `exhibition` object — otherwise the
+ * front end needs a second round trip just to print a title. Added to the
+ * contract on 13 Sep; raise it with Ray at the M3 review.
+ */
+export const EXHIBITIONS = {
+  'ex-0001': {
+    id: 'ex-0001',
+    title: 'Colonial Mining & the Overland Telegraph',
+    slug: 'colonial-mining-overland-telegraph',
+  },
+  'ex-0002': {
+    id: 'ex-0002',
+    title: 'Working the Monster Mine',
+    slug: 'working-the-monster-mine',
+  },
+  'ex-0003': {
+    id: 'ex-0003',
+    title: 'Whaling and the Southern Coast',
+    slug: 'whaling-and-the-southern-coast',
+  },
+};

@@ -1,5 +1,5 @@
 import { request, USE_MOCKS, delay, ApiError } from './client';
-import { COLLECTION_ITEMS } from './mocks/collections';
+import { COLLECTION_ITEMS, EXHIBITIONS } from './mocks/collections';
 
 /**
  * Collection search and detail.
@@ -78,7 +78,8 @@ export async function getCollectionItem(slug) {
         message: 'That collection item does not exist.',
       });
     }
-    return item;
+    // The detail endpoint returns the exhibition nested, not just its id.
+    return { ...item, exhibition: EXHIBITIONS[item.exhibition_id] ?? null };
   }
 
   return request(`/collection-items/${slug}`);
@@ -92,4 +93,19 @@ export async function getCollectionCount() {
   }
   const { total } = await request('/collection-items', { params: { page_size: 1 } });
   return total;
+}
+
+/**
+ * Other items from the same category, for the "See related items" strip.
+ *
+ * Deliberately reuses the search endpoint rather than adding a
+ * /collection-items/{slug}/related route — one fewer endpoint for Ray to
+ * build and test, and the filtering logic already exists.
+ */
+export async function getRelatedItems(item, limit = 3) {
+  const { items } = await searchCollections({
+    category: item.category,
+    page_size: limit + 1,
+  });
+  return items.filter((candidate) => candidate.id !== item.id).slice(0, limit);
 }

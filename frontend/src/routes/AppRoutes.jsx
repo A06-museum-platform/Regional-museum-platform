@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import VisitorLayout from '../layouts/VisitorLayout';
 import HomePage from '../pages/visitor/HomePage';
 import CollectionsPage from '../pages/visitor/CollectionsPage';
+import CollectionItemPage from '../pages/visitor/CollectionItemPage';
 import PlaceholderPage from '../pages/PlaceholderPage';
 import NotFoundPage from '../pages/NotFoundPage';
 
@@ -23,7 +24,7 @@ export default function AppRoutes() {
         <Route path="exhibitions/:slug" element={<PlaceholderPage title="Exhibition" />} />
 
         <Route path="collections" element={<CollectionsPage />} />
-        <Route path="collections/:slug" element={<PlaceholderPage title="Collection item" />} />
+        <Route path="collections/:slug" element={<CollectionItemPage />} />
 
         <Route path="events" element={<PlaceholderPage title="Events" />} />
         <Route path="events/:slug" element={<PlaceholderPage title="Event" />} />
