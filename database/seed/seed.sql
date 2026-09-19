@@ -336,3 +336,33 @@ VALUES
     NULL,
     'Pending'
 );
+
+
+-- =========================================================
+-- 14. Media Assets (dummy placeholder images for demos)
+-- =========================================================
+-- Placeholder images from picsum.photos so demos render without
+-- a Supabase bucket. Replace these URLs with the public Supabase
+-- Storage URLs once real staff uploads exist (see docs/decisions.md).
+-- First image per owner is flagged is_primary and is served as
+-- the contract's `thumbnail_url`.
+
+INSERT INTO media_asset
+(collection_item_id, exhibition_id, event_id, url, media_type, sort_order, is_primary)
+VALUES
+-- Collection items (ids 1-5 from section 8)
+(1, NULL, NULL, 'https://picsum.photos/id/1015/800/600', 'image', 0, TRUE),
+(1, NULL, NULL, 'https://picsum.photos/id/1036/800/600', 'image', 1, FALSE),
+(2, NULL, NULL, 'https://picsum.photos/id/1016/800/600', 'image', 0, TRUE),
+(2, NULL, NULL, 'https://picsum.photos/id/1043/800/600', 'image', 1, FALSE),
+(3, NULL, NULL, 'https://picsum.photos/id/1018/800/600', 'image', 0, TRUE),
+(4, NULL, NULL, 'https://picsum.photos/id/1025/800/600', 'image', 0, TRUE),
+(5, NULL, NULL, 'https://picsum.photos/id/1035/800/600', 'image', 0, TRUE),
+-- Exhibitions (ids 1-3 from section 7)
+(NULL, 1, NULL, 'https://picsum.photos/id/1050/800/600', 'image', 0, TRUE),
+(NULL, 2, NULL, 'https://picsum.photos/id/1060/800/600', 'image', 0, TRUE),
+(NULL, 3, NULL, 'https://picsum.photos/id/1067/800/600', 'image', 0, TRUE),
+-- Events (ids 1-3 from section 11)
+(NULL, NULL, 1, 'https://picsum.photos/id/1074/800/600', 'image', 0, TRUE),
+(NULL, NULL, 2, 'https://picsum.photos/id/1080/800/600', 'image', 0, TRUE),
+(NULL, NULL, 3, 'https://picsum.photos/id/1084/800/600', 'image', 0, TRUE);
