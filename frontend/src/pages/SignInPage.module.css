@@ -1,0 +1,42 @@
+.wrap { max-width: 420px; margin: 0 auto; padding: var(--s-6) 0; }
+
+.card {
+  background: var(--c-white);
+  border: 1px solid var(--c-border);
+  border-top: 4px solid var(--c-moss);
+  border-radius: var(--radius);
+  padding: var(--s-6);
+}
+
+.errorBox {
+  background: var(--c-danger-soft);
+  border: 1px solid var(--c-danger);
+  border-radius: var(--radius);
+  padding: var(--s-3) var(--s-4);
+  color: var(--c-danger);
+  font-size: var(--fs-sm);
+  margin-bottom: var(--s-4);
+}
+
+.demo {
+  margin-top: var(--s-6);
+  border: 2px dashed var(--c-ochre);
+  background: var(--c-ochre-soft);
+  border-radius: var(--radius);
+  padding: var(--s-4);
+  font-size: var(--fs-sm);
+}
+
+.demoHead { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-3); }
+
+.demoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
+  border-top: 1px solid rgba(192, 138, 30, 0.35);
+}
+
+.demoName { font-weight: 600; }
+.demoEmail { font-size: var(--fs-xs); color: #7A5510; }

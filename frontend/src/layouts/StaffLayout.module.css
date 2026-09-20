@@ -1,0 +1,83 @@
+/* Admin screens are desktop-only by decision — staff work at a desk. Below
+   768px the sidebar stacks rather than being made properly responsive, and
+   that scoping decision is stated in the report. */
+
+.shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+
+.sidebar {
+  background: var(--c-ink);
+  color: var(--c-paper);
+  display: flex;
+  flex-direction: column;
+}
+
+.brand { padding: var(--s-4) var(--s-5); border-bottom: 1px solid #3A4632; }
+.brandName { font-family: var(--font-display); font-weight: 700; color: var(--c-lime); }
+.brandRole { font-size: var(--fs-xs); color: #9AA68C; }
+
+.nav { padding: var(--s-3) 0; flex: 1; }
+
+.navItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: 10px var(--s-5);
+  min-height: var(--tap-min);
+  font-size: 14px;
+  color: var(--c-paper);
+  text-decoration: none;
+}
+
+.navItem:hover { background: #2A3524; }
+.navItemActive { background: var(--c-moss); font-weight: 600; }
+.navItemActive:hover { background: var(--c-moss); }
+
+.adminBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: var(--c-lime);
+  color: var(--c-ink);
+}
+
+.account { padding: var(--s-4) var(--s-5); border-top: 1px solid #3A4632; font-size: var(--fs-sm); }
+.accountName { font-weight: 600; }
+.accountRole { color: #9AA68C; text-transform: capitalize; }
+
+.signOut {
+  margin-top: var(--s-3);
+  background: none;
+  border: 1px solid #3A4632;
+  border-radius: var(--radius);
+  color: var(--c-paper);
+  font: inherit;
+  font-size: var(--fs-sm);
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.signOut:hover { background: #2A3524; }
+
+.content { background: var(--c-paper); }
+
+.topbar {
+  background: var(--c-white);
+  border-bottom: 1px solid var(--c-border);
+  padding: var(--s-3) var(--s-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  font-size: var(--fs-sm);
+  color: var(--c-muted);
+}
+
+.main { padding: var(--s-6); }
+
+@media (max-width: 768px) {
+  .shell { grid-template-columns: 1fr; }
+  .nav { display: flex; flex-wrap: wrap; padding: var(--s-2); }
+  .navItem { flex: 1 1 auto; border-radius: var(--radius); }
+  .main { padding: var(--s-4); }
+}

@@ -1,0 +1,60 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 42, 23, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--s-6) var(--s-4);
+  overflow-y: auto;
+  z-index: 50;
+}
+
+.panel {
+  background: var(--c-white);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgba(30, 42, 23, 0.22);
+  width: 100%;
+  max-width: 620px;
+  margin: auto 0;
+}
+
+.narrow { max-width: 460px; }
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding: var(--s-5) var(--s-5) 0;
+}
+
+.head h2 { margin: 0; font-size: var(--fs-lg); }
+
+.close {
+  background: none;
+  border: 0;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--c-muted);
+  cursor: pointer;
+  padding: 0 var(--s-1);
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.body { padding: var(--s-5); }
+
+.foot {
+  display: flex;
+  gap: var(--s-3);
+  justify-content: flex-end;
+  padding: 0 var(--s-5) var(--s-5);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .backdrop { padding: 0; }
+  .panel { border-radius: 0; min-height: 100vh; }
+  .foot > * { flex: 1; }
+}

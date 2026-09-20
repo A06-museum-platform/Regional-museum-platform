@@ -182,4 +182,21 @@ export const EVENTS = [
     age_max: 14,
     status: 'published',
   },
+  {
+    id: 'ev-0011',
+    title: 'Summer twilight: telegraph under the stars',
+    slug: 'summer-twilight-telegraph',
+    description:
+      'Draft listing. Evening session pairing the Morse lab with an outdoor astronomy talk. Dates not yet confirmed with the education team.',
+    gallery: 'telegraph',
+    starts_at: '2026-12-05T19:00:00+10:30',
+    ends_at: '2026-12-05T21:00:00+10:30',
+    capacity: 40,
+    registered_count: 0,
+    price_cents: 1800,
+    member_price_cents: 0,
+    age_min: 10,
+    age_max: null,
+    status: 'draft',
+  },
 ];
