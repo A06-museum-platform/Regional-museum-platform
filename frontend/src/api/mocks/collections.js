@@ -7,8 +7,6 @@
  * how Week 7 integration turns into a rewrite.
  */
 
-const img = (id) => `https://picsum.photos/id/${id}/800/600`;
-
 export const COLLECTION_ITEMS = [
   {
     id: 'ci-0001',
@@ -23,7 +21,7 @@ export const COLLECTION_ITEMS = [
     year_from: 1845,
     year_to: 1850,
     materials: 'Copper carbonate, quartz',
-    image_url: img(1015),
+    image_url: null,
     exhibition_id: 'ex-0001',
     is_family_friendly: true,
     status: 'published',
@@ -41,7 +39,7 @@ export const COLLECTION_ITEMS = [
     year_from: 1872,
     year_to: 1872,
     materials: 'Brass, copper, cedar',
-    image_url: img(1016),
+    image_url: null,
     exhibition_id: 'ex-0001',
     is_family_friendly: true,
     status: 'published',
@@ -59,7 +57,7 @@ export const COLLECTION_ITEMS = [
     year_from: 1851,
     year_to: 1851,
     materials: 'Ink on rag paper, leather binding',
-    image_url: img(1018),
+    image_url: null,
     exhibition_id: 'ex-0002',
     is_family_friendly: false,
     status: 'published',
@@ -77,7 +75,7 @@ export const COLLECTION_ITEMS = [
     year_from: 1889,
     year_to: 1889,
     materials: 'Albumen print',
-    image_url: img(1025),
+    image_url: null,
     exhibition_id: 'ex-0003',
     is_family_friendly: false,
     status: 'published',
@@ -95,7 +93,7 @@ export const COLLECTION_ITEMS = [
     year_from: 1858,
     year_to: 1858,
     materials: 'Cast iron',
-    image_url: img(1035),
+    image_url: null,
     exhibition_id: 'ex-0002',
     is_family_friendly: true,
     status: 'published',
@@ -113,7 +111,7 @@ export const COLLECTION_ITEMS = [
     year_from: 1860,
     year_to: 1870,
     materials: 'Azurite, limonite',
-    image_url: img(1036),
+    image_url: null,
     exhibition_id: 'ex-0001',
     is_family_friendly: true,
     status: 'published',
@@ -131,7 +129,7 @@ export const COLLECTION_ITEMS = [
     year_from: 1901,
     year_to: 1901,
     materials: 'Brass, iron, jarrah',
-    image_url: img(1043),
+    image_url: null,
     exhibition_id: 'ex-0001',
     is_family_friendly: true,
     status: 'published',
@@ -149,7 +147,7 @@ export const COLLECTION_ITEMS = [
     year_from: 1871,
     year_to: 1872,
     materials: 'Graphite on paper',
-    image_url: img(1050),
+    image_url: null,
     exhibition_id: 'ex-0001',
     is_family_friendly: false,
     status: 'published',
@@ -167,7 +165,7 @@ export const COLLECTION_ITEMS = [
     year_from: 1912,
     year_to: 1912,
     materials: 'Brass',
-    image_url: img(1060),
+    image_url: null,
     exhibition_id: null,
     is_family_friendly: true,
     status: 'published',
@@ -185,7 +183,7 @@ export const COLLECTION_ITEMS = [
     year_from: 1931,
     year_to: 1931,
     materials: 'Gelatin silver print',
-    image_url: img(1067),
+    image_url: null,
     exhibition_id: 'ex-0002',
     is_family_friendly: true,
     status: 'published',
@@ -203,7 +201,7 @@ export const COLLECTION_ITEMS = [
     year_from: 1895,
     year_to: 1895,
     materials: 'Brass, mahogany, glass',
-    image_url: img(1074),
+    image_url: null,
     exhibition_id: 'ex-0003',
     is_family_friendly: true,
     status: 'published',
@@ -221,36 +219,29 @@ export const COLLECTION_ITEMS = [
     year_from: 1866,
     year_to: 1866,
     materials: 'Ink on paper',
-    image_url: img(1080),
+    image_url: null,
     exhibition_id: null,
     is_family_friendly: false,
     status: 'published',
   },
 ];
 
-/**
- * Minimal exhibition records, enough to resolve the "Part of" link on an item
- * detail page.
- *
- * CONTRACT NOTE: the list endpoint returns `exhibition_id` only, but the
- * detail endpoint must return a nested `exhibition` object — otherwise the
- * front end needs a second round trip just to print a title. Added to the
- * contract on 13 Sep; raise it with Ray at the M3 review.
- */
-export const EXHIBITIONS = {
-  'ex-0001': {
-    id: 'ex-0001',
-    title: 'Colonial Mining & the Overland Telegraph',
-    slug: 'colonial-mining-overland-telegraph',
-  },
-  'ex-0002': {
-    id: 'ex-0002',
-    title: 'Working the Monster Mine',
-    slug: 'working-the-monster-mine',
-  },
-  'ex-0003': {
-    id: 'ex-0003',
-    title: 'Whaling and the Southern Coast',
-    slug: 'whaling-and-the-southern-coast',
-  },
-};
+/** One draft record so the staff status filter has something to find. */
+COLLECTION_ITEMS.push({
+  id: 'ci-0013',
+  accession_number: 'MAC-1924-03',
+  title: 'Whim winding drum, unattributed',
+  slug: 'whim-winding-drum-unattributed',
+  description:
+    'Draft record. Provenance unconfirmed — the donor file gives two different mine sites and the curatorial team has not resolved which is correct.',
+  category: 'machinery',
+  gallery: 'monster_mine',
+  period_text: 'c. 1924',
+  year_from: 1920,
+  year_to: 1930,
+  materials: 'Iron, jarrah',
+  image_url: null,
+  exhibition_id: null,
+  is_family_friendly: false,
+  status: 'draft',
+});

@@ -1,0 +1,56 @@
+.head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: var(--s-4); flex-wrap: wrap; margin-bottom: var(--s-4);
+}
+
+.tabs { display: flex; gap: var(--s-1); border-bottom: 1px solid var(--c-border); margin-bottom: var(--s-5); }
+
+.tab {
+  background: none; border: 0; border-bottom: 3px solid transparent;
+  padding: var(--s-3) var(--s-4); font: inherit; font-size: 14px; font-weight: 600;
+  color: var(--c-muted); cursor: pointer; min-height: var(--tap-min);
+}
+
+.tab:hover { color: var(--c-ink); }
+.tabActive { color: var(--c-ink); border-bottom-color: var(--c-moss); }
+
+.tabCount {
+  font-weight: 400; font-size: var(--fs-xs); color: var(--c-muted); margin-left: var(--s-1);
+}
+
+.filters { display: flex; gap: var(--s-3); flex-wrap: wrap; align-items: flex-end; margin-bottom: var(--s-4); }
+.searchField { flex: 2 1 240px; }
+.selectField { flex: 1 1 150px; }
+
+.tableWrap {
+  background: var(--c-white); border: 1px solid var(--c-border);
+  border-radius: var(--radius); overflow-x: auto;
+}
+
+.table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 760px; }
+.table th {
+  text-align: left; font-weight: 600; font-size: var(--fs-sm);
+  padding: var(--s-3) var(--s-4); background: var(--c-paper);
+  border-bottom: 1px solid var(--c-border); white-space: nowrap;
+}
+.table td { padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--c-border); vertical-align: top; }
+.table tr:last-child td { border-bottom: 0; }
+
+.title { font-weight: 600; }
+.meta { font-size: var(--fs-xs); color: var(--c-muted); margin-top: 2px; }
+.actions { text-align: right; white-space: nowrap; }
+.actions > * { margin-left: var(--s-2); }
+
+.errorBox {
+  background: var(--c-danger-soft); border: 1px solid var(--c-danger);
+  border-radius: var(--radius); padding: var(--s-3) var(--s-4);
+  color: var(--c-danger); font-size: var(--fs-sm); margin-bottom: var(--s-4);
+}
+
+.formRow { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-4); }
+
+@media (max-width: 768px) {
+  .filters { flex-direction: column; align-items: stretch; }
+  .formRow { grid-template-columns: 1fr; }
+  .tabs { overflow-x: auto; }
+}

@@ -1,0 +1,27 @@
+.wrap {
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  padding: var(--s-7) var(--s-5);
+  text-align: center;
+}
+
+.inner { max-width: 52ch; margin: 0 auto; }
+
+.mark {
+  width: 52px;
+  height: 52px;
+  border-radius: 99px;
+  background: var(--c-danger-soft);
+  border: 1px solid var(--c-danger);
+  margin: 0 auto var(--s-5);
+}
+
+.body { color: var(--c-muted); font-size: 14px; margin: 0 auto var(--s-5); }
+
+.actions { display: flex; gap: var(--s-3); justify-content: center; flex-wrap: wrap; }
+
+.reference {
+  margin-top: var(--s-5);
+  font-size: var(--fs-xs);
+  color: var(--c-muted);
+}

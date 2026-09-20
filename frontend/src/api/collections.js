@@ -1,5 +1,6 @@
 import { request, USE_MOCKS, delay, ApiError } from './client';
-import { COLLECTION_ITEMS, EXHIBITIONS } from './mocks/collections';
+import { COLLECTION_ITEMS } from './mocks/collections';
+import { exhibitionById } from './mocks/exhibitions';
 
 /**
  * Collection search and detail.
@@ -79,7 +80,7 @@ export async function getCollectionItem(slug) {
       });
     }
     // The detail endpoint returns the exhibition nested, not just its id.
-    return { ...item, exhibition: EXHIBITIONS[item.exhibition_id] ?? null };
+    return { ...item, exhibition: exhibitionById(item.exhibition_id) };
   }
 
   return request(`/collection-items/${slug}`);
@@ -108,4 +109,101 @@ export async function getRelatedItems(item, limit = 3) {
     page_size: limit + 1,
   });
   return items.filter((candidate) => candidate.id !== item.id).slice(0, limit);
+}
+
+/* ==========================================================================
+   Staff-side operations.
+
+   Contract:
+     GET    /staff/collection-items     includes drafts
+     POST   /staff/collection-items
+     PATCH  /staff/collection-items/{id}
+     DELETE /staff/collection-items/{id}
+   ========================================================================== */
+
+const slugifyTitle = (value) =>
+  value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+
+export async function listStaffCollectionItems({ q = '', status = '', gallery = '', category = '' } = {}) {
+  if (USE_MOCKS) {
+    await delay();
+    const needle = q.trim().toLowerCase();
+    const matched = COLLECTION_ITEMS.filter((item) => {
+      if (status && item.status !== status) return false;
+      if (gallery && item.gallery !== gallery) return false;
+      if (category && item.category !== category) return false;
+      if (needle) {
+        const haystack = `${item.title} ${item.description} ${item.accession_number}`.toLowerCase();
+        if (!haystack.includes(needle)) return false;
+      }
+      return true;
+    }).map((item) => ({ ...item, exhibition: exhibitionById(item.exhibition_id) }));
+
+    return { items: matched, total: matched.length };
+  }
+  return request('/staff/collection-items', { params: { q, status, gallery, category } });
+}
+
+/** Accession numbers are the museum's own identifier and must stay unique. */
+function assertAccessionFree(accessionNumber, ignoreId = null) {
+  const clash = COLLECTION_ITEMS.find(
+    (item) =>
+      item.id !== ignoreId &&
+      item.accession_number.toLowerCase() === accessionNumber.trim().toLowerCase()
+  );
+  if (clash) {
+    throw new ApiError({
+      status: 409,
+      code: 'ACCESSION_TAKEN',
+      message: `Accession number ${accessionNumber} is already used by “${clash.title}”.`,
+    });
+  }
+}
+
+export async function createCollectionItem(payload) {
+  if (USE_MOCKS) {
+    await delay();
+    assertAccessionFree(payload.accession_number);
+    const item = {
+      id: `ci-${String(COLLECTION_ITEMS.length + 1).padStart(4, '0')}`,
+      slug: slugifyTitle(payload.title),
+      image_url: null,
+      ...payload,
+    };
+    COLLECTION_ITEMS.push(item);
+    return item;
+  }
+  return request('/staff/collection-items', { method: 'POST', body: payload });
+}
+
+export async function updateCollectionItem(id, changes) {
+  if (USE_MOCKS) {
+    await delay();
+    const index = COLLECTION_ITEMS.findIndex((item) => item.id === id);
+    if (index === -1) {
+      throw new ApiError({ status: 404, code: 'NOT_FOUND', message: 'That object no longer exists.' });
+    }
+    if (changes.accession_number) assertAccessionFree(changes.accession_number, id);
+
+    const next = { ...COLLECTION_ITEMS[index], ...changes };
+    if (changes.title && changes.title !== COLLECTION_ITEMS[index].title) {
+      next.slug = slugifyTitle(changes.title);
+    }
+    COLLECTION_ITEMS[index] = next;
+    return next;
+  }
+  return request(`/staff/collection-items/${id}`, { method: 'PATCH', body: changes });
+}
+
+export async function deleteCollectionItem(id) {
+  if (USE_MOCKS) {
+    await delay();
+    const index = COLLECTION_ITEMS.findIndex((item) => item.id === id);
+    if (index === -1) {
+      throw new ApiError({ status: 404, code: 'NOT_FOUND', message: 'That object no longer exists.' });
+    }
+    COLLECTION_ITEMS.splice(index, 1);
+    return null;
+  }
+  return request(`/staff/collection-items/${id}`, { method: 'DELETE' });
 }
