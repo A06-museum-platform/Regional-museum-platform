@@ -15,6 +15,9 @@ import NotFoundPage from '../pages/NotFoundPage';
 import StaffDashboard from '../pages/staff/StaffDashboard';
 import StaffEventsPage from '../pages/staff/StaffEventsPage';
 import OpeningHoursPage from '../pages/staff/OpeningHoursPage';
+import MembersPage from '../pages/admin/MembersPage';
+import StaffAccountsPage from '../pages/admin/StaffAccountsPage';
+import ActivityLogPage from '../pages/admin/ActivityLogPage';
 
 /**
  * Three route trees, one per audience.
@@ -72,9 +75,9 @@ export default function AppRoutes() {
       {/* ---------- administration ---------- */}
       <Route element={<RoleGuard allow={['admin']} />}>
         <Route path="/admin" element={<StaffLayout />}>
-          <Route path="members" element={<PlaceholderPage title="Members" />} />
-          <Route path="accounts" element={<PlaceholderPage title="Staff accounts & roles" />} />
-          <Route path="activity" element={<PlaceholderPage title="Activity log" />} />
+          <Route path="members" element={<MembersPage />} />
+          <Route path="accounts" element={<StaffAccountsPage />} />
+          <Route path="activity" element={<ActivityLogPage />} />
         </Route>
       </Route>
     </Routes>

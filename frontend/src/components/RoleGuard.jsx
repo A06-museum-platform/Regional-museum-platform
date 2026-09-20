@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { recordLocally } from '../api/activity';
 import { useAuth } from '../context/AuthContext';
 import AccessRefusedPage from '../pages/AccessRefusedPage';
 
@@ -18,6 +20,21 @@ import AccessRefusedPage from '../pages/AccessRefusedPage';
 export default function RoleGuard({ allow }) {
   const { user, ready } = useAuth();
   const location = useLocation();
+
+  const refused = ready && user && !allow.includes(user.role);
+
+  // Mock-only: mirrors the row FastAPI writes when it refuses the request, so
+  // the demonstration chain (refusal screen -> log entry) holds together.
+  // recordLocally is a no-op against the real API — the server owns the log.
+  useEffect(() => {
+    if (!refused) return;
+    recordLocally({
+      actor: user,
+      action: 'access.refused',
+      target: location.pathname,
+      reference: 'ACC-403',
+    });
+  }, [refused, location.pathname, user]);
 
   if (!ready) return null;
 
