@@ -11,7 +11,7 @@ export const ACTIVITY = [
   {
     id: 'al-0001',
     created_at: '2026-09-19T03:12:00Z',
-    actor_name: 'Meng Xuan',
+    actor_name: 'Xuan Meng',
     actor_role: 'staff',
     action: 'event.published',
     target: 'Morse code and galvanic batteries: hands-on lab',
@@ -21,7 +21,7 @@ export const ACTIVITY = [
   {
     id: 'al-0002',
     created_at: '2026-09-18T22:41:00Z',
-    actor_name: 'Meng Xuan',
+    actor_name: 'Xuan Meng',
     actor_role: 'staff',
     action: 'opening_hours.updated',
     target: 'Weekly pattern — Friday late opening',

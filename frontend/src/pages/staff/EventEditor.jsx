@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Modal from '../../components/Modal';
 import Button from '../../components/Button';
+import FormErrorSummary from '../../components/FormErrorSummary';
 import { GALLERIES } from '../../api/constants';
 import styles from './StaffEventsPage.module.css';
 
@@ -50,18 +51,35 @@ export default function EventEditor({ event, onSave, onClose, busy, error }) {
 
   const set = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
-  const endBeforeStart =
-    form.starts_at && form.ends_at && new Date(form.ends_at) <= new Date(form.starts_at);
+  const [attempted, setAttempted] = useState(false);
+  const [blocking, setBlocking] = useState({});
 
-  const valid =
-    form.title.trim().length > 2 &&
-    form.description.trim().length > 10 &&
-    form.starts_at &&
-    form.ends_at &&
-    !endBeforeStart &&
-    Number(form.capacity) > 0;
+  const errors = {};
+  if (form.title.trim().length <= 2) errors.title = 'Give the session a title.';
+  if (form.description.trim().length <= 10)
+    errors.description = 'Write at least a sentence describing the session.';
+  if (!form.starts_at) errors.starts_at = 'Set when the session starts.';
+  if (!form.ends_at) errors.ends_at = 'Set when the session finishes.';
+  if (form.starts_at && form.ends_at && new Date(form.ends_at) <= new Date(form.starts_at))
+    errors.ends_at = 'The finish time needs to be after the start time.';
+  if (!(Number(form.capacity) > 0))
+    errors.capacity = 'Set how many places are available.';
+
+  const endBeforeStart = Boolean(errors.ends_at);
+
+  // Drafts only need a title; everything else is required to publish.
+  const draftErrors = {};
+  if (errors.title) draftErrors.title = errors.title;
+
+  const showError = (key) => (attempted ? blocking[key] : null);
 
   function save(status) {
+    const check = status === 'draft' ? draftErrors : errors;
+    if (Object.keys(check).length > 0) {
+      setBlocking(check);
+      setAttempted(true);
+      return;
+    }
     onSave({
       title: form.title.trim(),
       description: form.description.trim(),
@@ -84,34 +102,43 @@ export default function EventEditor({ event, onSave, onClose, busy, error }) {
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="ghost" disabled={!valid || busy} onClick={() => save('draft')}>
+          <Button variant="ghost" disabled={busy} onClick={() => save('draft')}>
             Save as draft
           </Button>
-          <Button disabled={!valid || busy} onClick={() => save('published')}>
+          <Button disabled={busy} onClick={() => save('published')}>
             {busy ? 'Saving…' : 'Publish'}
           </Button>
         </>
       }
     >
       {error && <div className={styles.errorBox}>{error}</div>}
+      {attempted && <FormErrorSummary errors={blocking} />}
 
       <div className="field">
         <label htmlFor="ev-title">Title</label>
-        <input id="ev-title" className="control" value={form.title} onChange={set('title')} />
+        <input
+          id="ev-title"
+          className={`control ${showError('title') ? 'control--error' : ''}`}
+          value={form.title}
+          onChange={set('title')}
+        />
+        {showError('title') && <div className="error-text">{blocking.title}</div>}
       </div>
 
       <div className="field">
         <label htmlFor="ev-desc">Description</label>
         <textarea
           id="ev-desc"
-          className="control"
+          className={`control ${showError('description') ? 'control--error' : ''}`}
           rows={4}
           value={form.description}
           onChange={set('description')}
         />
-        <div className="hint">
-          Written for visitors, not for staff. This is what appears on the public listing.
-        </div>
+        {showError('description')
+          ? <div className="error-text">{blocking.description}</div>
+          : <div className="hint">
+              Written for visitors, not for staff. This is what appears on the public listing.
+            </div>}
       </div>
 
       <div className="field">
@@ -126,8 +153,14 @@ export default function EventEditor({ event, onSave, onClose, busy, error }) {
       <div className={styles.formRow}>
         <div className="field">
           <label htmlFor="ev-start">Starts</label>
-          <input id="ev-start" className="control" type="datetime-local"
-            value={form.starts_at} onChange={set('starts_at')} />
+          <input
+            id="ev-start"
+            className={`control ${showError('starts_at') ? 'control--error' : ''}`}
+            type="datetime-local"
+            value={form.starts_at}
+            onChange={set('starts_at')}
+          />
+          {showError('starts_at') && <div className="error-text">{blocking.starts_at}</div>}
         </div>
         <div className="field">
           <label htmlFor="ev-end">Ends</label>
@@ -138,8 +171,8 @@ export default function EventEditor({ event, onSave, onClose, busy, error }) {
             value={form.ends_at}
             onChange={set('ends_at')}
           />
-          {endBeforeStart && (
-            <div className="error-text">The finish time needs to be after the start time.</div>
+          {(endBeforeStart || showError('ends_at')) && (
+            <div className="error-text">{errors.ends_at || blocking.ends_at}</div>
           )}
         </div>
       </div>
@@ -147,8 +180,15 @@ export default function EventEditor({ event, onSave, onClose, busy, error }) {
       <div className={styles.formRow}>
         <div className="field">
           <label htmlFor="ev-capacity">Places available</label>
-          <input id="ev-capacity" className="control" type="number" min="1"
-            value={form.capacity} onChange={set('capacity')} />
+          <input
+            id="ev-capacity"
+            className={`control ${showError('capacity') ? 'control--error' : ''}`}
+            type="number"
+            min="1"
+            value={form.capacity}
+            onChange={set('capacity')}
+          />
+          {showError('capacity') && <div className="error-text">{blocking.capacity}</div>}
           <div className="hint">
             The client confirmed capacity is decided per event, not fixed for the venue.
           </div>

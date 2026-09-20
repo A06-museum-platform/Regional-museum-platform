@@ -18,9 +18,9 @@ export const DEMO_USERS = [
   },
   {
     id: 'u-0002',
-    email: 'meng.xuan@sarhn.example.com',
+    email: 'xuan.meng@sarhn.example.com',
     password: 'demo1234',
-    full_name: 'Meng Xuan',
+    full_name: 'Xuan Meng',
     role: 'staff',
     is_active: true,
   },

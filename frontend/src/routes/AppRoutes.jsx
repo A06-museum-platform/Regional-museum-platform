@@ -14,6 +14,7 @@ import NotFoundPage from '../pages/NotFoundPage';
 
 import StaffDashboard from '../pages/staff/StaffDashboard';
 import StaffEventsPage from '../pages/staff/StaffEventsPage';
+import StaffContentPage from '../pages/staff/StaffContentPage';
 import OpeningHoursPage from '../pages/staff/OpeningHoursPage';
 import MembersPage from '../pages/admin/MembersPage';
 import StaffAccountsPage from '../pages/admin/StaffAccountsPage';
@@ -65,7 +66,7 @@ export default function AppRoutes() {
       <Route element={<RoleGuard allow={['staff', 'admin']} />}>
         <Route path="/staff" element={<StaffLayout />}>
           <Route index element={<StaffDashboard />} />
-          <Route path="content" element={<PlaceholderPage title="Exhibitions & collections" />} />
+          <Route path="content" element={<StaffContentPage />} />
           <Route path="events" element={<StaffEventsPage />} />
           <Route path="hours" element={<OpeningHoursPage />} />
           <Route path="bookings" element={<PlaceholderPage title="Bookings & check-in" />} />
