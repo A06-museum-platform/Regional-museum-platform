@@ -7,7 +7,10 @@ clear 503 only when an upload is actually attempted.
 
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
+
+_ALLOWED_BACKENDS = ("supabase", "r2", "local")
 
 
 class Settings(BaseSettings):
@@ -39,6 +42,16 @@ class Settings(BaseSettings):
     max_video_mb: int = 40
 
     model_config = {"env_file": ".env", "extra": "ignore"}
+
+    @field_validator("media_backend")
+    @classmethod
+    def _known_backend(cls, value: str) -> str:
+        if value.lower() not in _ALLOWED_BACKENDS:
+            raise ValueError(
+                f"Unsupported MEDIA_BACKEND={value!r}. "
+                f"Expected one of: {', '.join(_ALLOWED_BACKENDS)}."
+            )
+        return value.lower()
 
     @property
     def storage_configured(self) -> bool:

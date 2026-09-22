@@ -109,6 +109,8 @@ def test_factory_selection(tmp_path):
                 supabase_bucket="b",
             )
         )
+    with pytest.raises(ValueError, match="Unsupported MEDIA_BACKEND"):
+        get_storage(SimpleNamespace(media_backend="r22"))
 
 
 def test_s3_storage_mocked():
@@ -121,11 +123,26 @@ def test_s3_storage_mocked():
     fake_boto3.client = MagicMock(return_value=fake_client)
     sys.modules["boto3"] = fake_boto3
     try:
-        from app.services.storage import S3Storage, get_storage
+        from app.services.storage import S3Storage, get_storage, r2_public_base
 
-        store = S3Storage("https://acc.r2.cloudflarestorage.com", "ak", "sk", "media")
+        # Blank public base fails fast instead of storing unfetchable URLs.
+        with pytest.raises(StorageNotConfigured):
+            S3Storage("https://acc.r2.cloudflarestorage.com", "ak", "sk", "media", "")
+
+        store = S3Storage(
+            "https://acc.r2.cloudflarestorage.com",
+            "ak",
+            "sk",
+            "media",
+            "https://pub-abc.r2.dev",
+        )
         assert store.public_url("uploads/a/b.jpg") == (
-            "https://media.acc.r2.cloudflarestorage.com/uploads/a/b.jpg"
+            "https://pub-abc.r2.dev/uploads/a/b.jpg"
+        )
+        # Upload and delete agree on the key via the shared helper.
+        assert (
+            r2_public_base("https://acc.r2.cloudflarestorage.com", "media", "https://pub-abc.r2.dev/")
+            == "https://pub-abc.r2.dev"
         )
         import anyio
 
@@ -142,9 +159,19 @@ def test_s3_storage_mocked():
                 r2_access_key="ak",
                 r2_secret_key="sk",
                 r2_bucket="media",
-                r2_public_base="",
+                r2_public_base="https://pub-abc.r2.dev",
             )
         )
         assert isinstance(via_factory, S3Storage)
     finally:
         del sys.modules["boto3"]
+
+
+def test_settings_rejects_unknown_backend():
+    from pydantic import ValidationError
+
+    from app.core.config import Settings
+
+    with pytest.raises(ValidationError):
+        Settings(media_backend="r22")
+    assert Settings(media_backend="R2").media_backend == "r2"

@@ -19,13 +19,14 @@ Copy inventory (what lives where):
 
 1. Write migration `database/migrations/00N_<what>.sql`. **Append-only:
    never edit a merged `001/002/003` file** — reviewers reject such PRs.
-2. Apply to dev first, in order:
+2. Apply to dev with the tracker (safe to re-run — applied files skip):
    ```bash
    docker compose up -d db && sleep 8
-   for f in database/migrations/00*.sql; do
-     docker compose exec -T db psql -U museum -d museum -f - < "$f"
-   done
+   ./scripts/apply_migrations.sh
    ```
+   Migrations are non-idempotent by design; the `schema_migrations` table
+   is the applied-version mechanism. Never run raw `psql -f` loops over
+   `00*.sql` on an existing database — replays fail on already-applied files.
 3. Mirror the change in `backend/app/models/` + `schemas/` in the same PR.
 4. Failover copies need **no action**: dumps pick up new tables
    automatically; file mirrors are schema-blind; R2/local store bytes,
@@ -69,9 +70,10 @@ then re-run the mirror (§5). Direct drops without backfill rows are the
 
 Nightly (02:00 DB dump, 02:05 media mirror):
 ```bash
-./scripts/backup_database.sh        # pg_dump -Fc → backups/, 7-day rotation
-./scripts/mirror_media.sh           # rclone: active backends → local mirror dir
-./scripts/mirror_media.sh --dest r2 # same, toward R2 (needs R2 keys)
+./scripts/backup_database.sh              # pg_dump -Fc → backups/, 7-day rotation
+./scripts/mirror_media.sh                 # Supabase -> local mirror dir
+./scripts/mirror_media.sh --dest r2       # Supabase -> R2 warm standby (needs R2 keys)
+./scripts/mirror_media.sh --from volume   # uploads volume (local-mode files) -> mirror dir
 ```
 Manual re-sync after any bulk change: same commands, then verify:
 ```bash
@@ -82,12 +84,23 @@ rclone check <src> <dst>   # byte-level agreement, non-zero exit on drift
 
 ## 5. Failover flip (Supabase down) and failback
 
+Flipping the env var alone only moves **new** uploads — existing rows
+still point at the dead backend's URLs. The repoint step below rewrites
+stored URL prefixes (keys are identical across backends thanks to the
+shared `storage_key` layout + rclone sync), so old thumbnails keep working.
+
 ```bash
-# Failover: serve from R2 (or local if R2 unbuilt / offline demo)
-MEDIA_BACKEND=r2 docker compose up -d backend   # or MEDIA_BACKEND=local
-# ... verify: upload → 201, page renders, then:
-# Failback when Supabase recovers:
+# 0. Precondition: the standby actually holds the bytes. If the last
+#    nightly mirror is stale, sync first:
+./scripts/mirror_media.sh --dest r2
+# 1. Repoint existing rows supabase -> r2 (mechanical prefix rewrite):
+SUPABASE_URL=... R2_PUBLIC_BASE=... ./scripts/repoint_media_urls.sh supabase r2
+# 2. Flip serving to R2 (or `local` if R2 unbuilt / offline demo):
+MEDIA_BACKEND=r2 docker compose up -d backend
+# ... verify: upload → 201, old pages render from R2 URLs, then:
+# Failback when Supabase recovers (mirror image of the above):
 ./scripts/mirror_media.sh --dest supabase   # copy outage-window files back
+SUPABASE_URL=... R2_PUBLIC_BASE=... ./scripts/repoint_media_urls.sh r2 supabase
 MEDIA_BACKEND=supabase docker compose up -d backend
 ```
 Rehearse both directions once per milestone; log date + result here:

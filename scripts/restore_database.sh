@@ -7,11 +7,24 @@ set -euo pipefail
 DUMP="${1:?usage: restore_database.sh <dump-file>}"
 test -f "$DUMP" || { echo "dump file not found: $DUMP"; exit 1; }
 
+# The backend holds pooled connections, and Postgres refuses to drop a
+# database with open sessions — stop it first, restart at the end.
+echo "Stopping backend (open connections block DROP DATABASE)..."
+docker compose stop backend > /dev/null
+
 echo "Dropping and recreating database 'museum'..."
 docker compose exec -T db psql -U museum -d postgres -c \
   "DROP DATABASE museum;" -c "CREATE DATABASE museum;"
+
+# pg_restore needs a real file (custom-format archives are not streamable
+# over stdin), so copy the dump into the db container first.
 echo "Restoring $DUMP ..."
-docker compose exec -T db pg_restore -U museum -d museum -f - < "$DUMP" > /dev/null
+docker compose cp "$DUMP" db:/tmp/restore.dump
+docker compose exec -T db pg_restore -U museum -d museum /tmp/restore.dump
+docker compose exec -T db rm /tmp/restore.dump
+
+echo "Restarting backend..."
+docker compose up -d backend > /dev/null
 echo "Smoke check:"
 docker compose exec -T db psql -U museum -d museum -c \
   "SELECT (SELECT count(*) FROM user_account) AS users, (SELECT count(*) FROM media_asset) AS media;"

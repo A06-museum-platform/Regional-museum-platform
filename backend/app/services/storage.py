@@ -13,7 +13,28 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
+import anyio
 import httpx
+
+MEDIA_BACKENDS = ("supabase", "r2", "local")
+
+
+def r2_public_base(endpoint: str, bucket: str, public_base: str = "") -> str:
+    """Single source of truth for R2 public URLs, shared by upload and
+    delete-path key extraction so the two can never drift apart.
+
+    R2's S3 *API* endpoint does not serve browsers — a public base (the
+    bucket's r2.dev subdomain or a custom domain, Dashboard → R2 →
+    Settings) is required. Failing fast here beats storing URLs nobody
+    can fetch.
+    """
+    base = (public_base or "").rstrip("/")
+    if not base:
+        raise StorageNotConfigured(
+            "R2 public base URL is not configured. Set R2_PUBLIC_BASE to "
+            "the bucket's public r2.dev subdomain or custom domain."
+        )
+    return base
 
 IMAGE_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 VIDEO_CONTENT_TYPES = {"video/mp4", "video/webm"}
@@ -36,9 +57,9 @@ class UploadRejected(ValueError):
 
 
 class StorageNotConfigured(RuntimeError):
-    def __init__(self):
-        super().__init__("Supabase storage is not configured")
-        self.detail = "Media uploads are not configured on this server"
+    def __init__(self, detail: str = "Media uploads are not configured on this server"):
+        super().__init__(detail)
+        self.detail = detail
         self.code = "STORAGE_NOT_CONFIGURED"
 
 
@@ -170,11 +191,7 @@ class S3Storage:
         import boto3
 
         self.bucket = bucket
-        # Default: R2 bucket subdomain (...r2.dev or account endpoint).
-        # Set public_base explicitly when using a custom domain.
-        self.public_base = public_base.rstrip("/") or endpoint.rstrip("/").replace(
-            "https://", f"https://{bucket}."
-        )
+        self.public_base = r2_public_base(endpoint, bucket, public_base)
         self._client = boto3.client(
             "s3",
             endpoint_url=endpoint,
@@ -186,19 +203,35 @@ class S3Storage:
         return f"{self.public_base}/{key}"
 
     async def upload(self, key: str, data: bytes, content_type: str) -> str:
-        self._client.put_object(
-            Bucket=self.bucket, Key=key, Body=data, ContentType=content_type
+        # boto3 is synchronous: never block the event loop with it. A slow
+        # R2 call would otherwise stall unrelated API traffic — exactly the
+        # wrong failure mode for the backend meant to survive outages.
+        await anyio.to_thread.run_sync(
+            lambda: self._client.put_object(
+                Bucket=self.bucket, Key=key, Body=data, ContentType=content_type
+            )
         )
         return self.public_url(key)
 
     async def remove(self, key: str) -> None:
-        self._client.delete_object(Bucket=self.bucket, Key=key)
+        await anyio.to_thread.run_sync(
+            lambda: self._client.delete_object(Bucket=self.bucket, Key=key)
+        )
 
 
 def get_storage(settings):
     """Factory honoring MEDIA_BACKEND. Raises StorageNotConfigured (→503)
-    when the selected backend lacks credentials. 'local' never fails."""
-    mode = (settings.media_backend or "supabase").lower()
+    when the selected backend lacks credentials. 'local' never fails.
+    Unknown modes raise ValueError (also rejected at startup by the
+    Settings validator) — never silently fall through to Supabase, which
+    would upload bytes and then fail the storage CHECK, orphaning objects.
+    """
+    mode = (settings.media_backend or "local").lower()
+    if mode not in MEDIA_BACKENDS:
+        raise ValueError(
+            f"Unsupported MEDIA_BACKEND={settings.media_backend!r}. "
+            f"Expected one of: {', '.join(MEDIA_BACKENDS)}."
+        )
     if mode == "local":
         return LocalStorage(settings.local_upload_dir)
     if mode == "r2":

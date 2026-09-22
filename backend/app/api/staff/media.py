@@ -24,6 +24,7 @@ from app.services.storage import (
     StorageNotConfigured,
     UploadRejected,
     get_storage,
+    r2_public_base,
     storage_key,
     validate_upload,
 )
@@ -46,6 +47,11 @@ def _storage():
         return get_storage(settings), settings.media_backend.lower()
     except StorageNotConfigured as exc:
         raise ApiError(503, exc.detail, exc.code)
+    except ValueError as exc:
+        # Unknown MEDIA_BACKEND (belt-and-braces behind the Settings
+        # validator): fail loudly before any bytes move, never silently
+        # fall through to another backend and orphan objects.
+        raise ApiError(500, str(exc), "CONFIG_ERROR")
 
 
 async def _get_owner(db: AsyncSession, owner: str, owner_id: int) -> tuple[str, str]:
@@ -214,14 +220,23 @@ async def delete_media(
 
 
 def _key_from_url(url: str, storage: str) -> str:
+    """Inverse of public_url(), sharing the same base-URL helper so upload
+    and delete can never disagree about what a key looks like."""
     settings = get_settings()
-    prefixes = {
-        "supabase": (
+    if storage == "supabase":
+        prefix = (
             f"{settings.supabase_url.rstrip('/')}/storage/v1/object/public/"
             f"{settings.supabase_bucket}/"
-        ),
-        "r2": f"{settings.r2_public_base.rstrip('/')}/" if settings.r2_public_base else "",
-        "local": "/uploads/",
-    }
-    prefix = prefixes.get(storage, "")
-    return url[len(prefix):] if prefix and url.startswith(prefix) else url
+        )
+    elif storage == "r2":
+        prefix = (
+            r2_public_base(
+                settings.r2_endpoint, settings.r2_bucket, settings.r2_public_base
+            )
+            + "/"
+        )
+    elif storage == "local":
+        prefix = "/uploads/"
+    else:
+        return url
+    return url[len(prefix):] if url.startswith(prefix) else url

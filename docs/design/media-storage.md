@@ -72,9 +72,9 @@ F4/F5 once each, log both.
 
 | `MEDIA_BACKEND` | Writes | Reads | Keys? | Use when |
 |---|---|---|---|---|
-| `supabase` (default) | Supabase | Supabase CDN | Yes | Normal days |
+| `supabase` | Supabase | Supabase CDN | Yes | Normal days (keys configured) |
 | `r2` | R2 (S3 API, boto3) | R2 public URLs | Yes (scoped token) | Supabase outage |
-| `local` | Docker volume `/app/uploads` | Backend `/uploads` static | No | Offline / keyless dev |
+| `local` (default) | Docker volume `/app/uploads` | Backend `/uploads` static | No | Keyless dev + fully-offline demo |
 
 ## 5. Data model
 
@@ -151,7 +151,7 @@ owner-agnostic and survives either shape unchanged.
 
 | Failure | Response | RPO/RTO (prototype) |
 |---|---|---|
-| Supabase down | Flip `MEDIA_BACKEND` (r2 → local) | Minutes; rehearsed |
+| Supabase down | Flip `MEDIA_BACKEND` supabase → r2 (or → local if R2 unbuilt/offline) | Minutes; rehearsed |
 | Volume lost | Restore from rclone mirror (`restore_media.sh`) | Nightly RPO |
 | PG down | `restore_database.sh` from `pg_dump` rotation (7-day) | 24h RPO, <30min RTO |
 | Whole venue offline | Screen recording (risk register) | — |
