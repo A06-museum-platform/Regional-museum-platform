@@ -22,6 +22,12 @@ services:
       context: .
       dockerfile: infra/Dockerfile.backend
     env_file: .env
+    # Passthrough (not a secret default): lets `MEDIA_BACKEND=r2 ...`
+    # flip the active storage backend without editing files. Falls back
+    # to `local` when unset; a MEDIA_BACKEND line in .env also works
+    # because compose interpolates it here.
+    environment:
+      - MEDIA_BACKEND=${MEDIA_BACKEND:-local}
     ports:
       - "8000:8000"
     depends_on:
@@ -29,6 +35,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend/app:/app/app
+      - uploads-data:/app/uploads
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -53,3 +60,4 @@ services:
 
 volumes:
   postgres-data:
+  uploads-data:

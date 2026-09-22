@@ -25,6 +25,9 @@ npm-debug.log*
 *.db
 postgres-data/
 
+# Local media uploads (docker volume content, machine-specific)
+uploads/
+
 # Editors / OS
 .vscode/
 .idea/
