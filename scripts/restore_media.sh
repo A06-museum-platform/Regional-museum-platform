@@ -5,10 +5,13 @@
 # unaffected (their bytes live in the cloud, restored via mirror_media.sh).
 set -euo pipefail
 
-MIRROR_DIR="${MIRROR_DIR:-./backups/media}"
-test -d "$MIRROR_DIR" || { echo "mirror dir not found: $MIRROR_DIR"; exit 1; }
+# mirror_media.sh --from volume writes under <mirror>/volume/ (the key
+# layout starts below it), so restore from that subdir — copying the whole
+# mirror dir would nest an extra `volume/` path and restored URLs 404.
+SRC_DIR="${MIRROR_DIR:-./backups/media}/volume"
+test -d "$SRC_DIR" || { echo "mirror volume dir not found: $SRC_DIR (run mirror_media.sh --from volume first)"; exit 1; }
 
 docker compose up -d backend > /dev/null
-docker compose cp "$MIRROR_DIR/." backend:/app/uploads/
-echo "Restored $(find "$MIRROR_DIR" -type f | wc -l) files into uploads-data volume."
+docker compose cp "$SRC_DIR/." backend:/app/uploads/
+echo "Restored $(find "$SRC_DIR" -type f | wc -l) files into uploads-data volume."
 echo "Verify: curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8000/uploads/<key>"

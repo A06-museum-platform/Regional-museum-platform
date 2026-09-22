@@ -23,6 +23,7 @@ from app.schemas.media import MediaOut, MediaUploadOut
 from app.services.storage import (
     StorageNotConfigured,
     UploadRejected,
+    build_storage,
     get_storage,
     r2_public_base,
     storage_key,
@@ -206,17 +207,33 @@ async def delete_media(
         raise ApiError(404, f"Media {media_id} not found", "NOT_FOUND")
     # Best effort: a missing storage object must not block row deletion.
     # 'remote' seed rows point at third-party URLs — nothing to delete.
+    # The client is built from the ROW's backend, never the current
+    # MEDIA_BACKEND: after a flip, old rows still live where written.
     if row.storage in ("supabase", "r2", "local"):
-        try:
-            store, _ = _storage()
-            await store.remove(_key_from_url(row.url, row.storage))
-        except Exception:
-            pass
+        backend = _backend_for(row.storage)
+        if backend is not None:
+            try:
+                await backend.remove(_key_from_url(row.url, row.storage))
+            except Exception:
+                pass
     await db.execute(
         text("DELETE FROM media_asset WHERE media_id = :id"), {"id": media_id}
     )
     await db.commit()
     return None
+
+
+def _backend_for(storage_name):
+    """Delete-path client for the backend that owns the row. Returns None
+    when that backend is unusable here (no creds, unknown name) — the row
+    delete still proceeds; the orphaned object is reconciled by the next
+    mirror/repoint pass, never by blocking the request."""
+    if storage_name == "remote":
+        return None
+    try:
+        return build_storage(storage_name, get_settings())
+    except (StorageNotConfigured, ValueError):
+        return None
 
 
 def _key_from_url(url: str, storage: str) -> str:

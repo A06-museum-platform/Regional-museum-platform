@@ -109,7 +109,7 @@ def test_factory_selection(tmp_path):
                 supabase_bucket="b",
             )
         )
-    with pytest.raises(ValueError, match="Unsupported MEDIA_BACKEND"):
+    with pytest.raises(ValueError, match="Unsupported storage backend"):
         get_storage(SimpleNamespace(media_backend="r22"))
 
 
@@ -163,6 +163,17 @@ def test_s3_storage_mocked():
             )
         )
         assert isinstance(via_factory, S3Storage)
+        with pytest.raises(StorageNotConfigured):
+            get_storage(
+                SimpleNamespace(
+                    media_backend="r2",
+                    r2_endpoint="https://acc.r2.cloudflarestorage.com",
+                    r2_access_key="ak",
+                    r2_secret_key="sk",
+                    r2_bucket="media",
+                    r2_public_base="",
+                )
+            )
     finally:
         del sys.modules["boto3"]
 

@@ -219,17 +219,16 @@ class S3Storage:
         )
 
 
-def get_storage(settings):
-    """Factory honoring MEDIA_BACKEND. Raises StorageNotConfigured (→503)
-    when the selected backend lacks credentials. 'local' never fails.
-    Unknown modes raise ValueError (also rejected at startup by the
-    Settings validator) — never silently fall through to Supabase, which
-    would upload bytes and then fail the storage CHECK, orphaning objects.
+def build_storage(mode, settings):
+    """Build the backend named by `mode` (not necessarily the active one).
+    Delete paths use this with the ROW's stored backend: after a flip, old
+    rows still live where they were written, and removing via the current
+    backend would target the wrong system with the wrong key.
     """
-    mode = (settings.media_backend or "local").lower()
+    mode = (mode or "local").lower()
     if mode not in MEDIA_BACKENDS:
         raise ValueError(
-            f"Unsupported MEDIA_BACKEND={settings.media_backend!r}. "
+            f"Unsupported storage backend={mode!r}. "
             f"Expected one of: {', '.join(MEDIA_BACKENDS)}."
         )
     if mode == "local":
@@ -247,3 +246,13 @@ def get_storage(settings):
         settings.supabase_service_key,
         settings.supabase_bucket,
     )
+
+
+def get_storage(settings):
+    """Factory honoring MEDIA_BACKEND. Raises StorageNotConfigured (→503)
+    when the selected backend lacks credentials. 'local' never fails.
+    Unknown modes raise ValueError (also rejected at startup by the
+    Settings validator) — never silently fall through to Supabase, which
+    would upload bytes and then fail the storage CHECK, orphaning objects.
+    """
+    return build_storage(settings.media_backend, settings)

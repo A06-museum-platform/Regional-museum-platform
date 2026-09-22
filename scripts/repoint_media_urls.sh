@@ -11,14 +11,16 @@ set -euo pipefail
 FROM="${1:?usage: repoint_media_urls.sh <supabase|r2|local> <supabase|r2|local>}"
 TO="${2:?usage: repoint_media_urls.sh <supabase|r2|local> <supabase|r2|local>}"
 
-SUPABASE_URL="${SUPABASE_URL:?set SUPABASE_URL (or source .env)}"
-SUPABASE_BUCKET="${SUPABASE_BUCKET:-museum-media}"
-R2_PUBLIC_BASE="${R2_PUBLIC_BASE:?set R2_PUBLIC_BASE (or source .env)}"
-
+# Each backend's variables are required only when that backend takes part —
+# keyless local-only setups (the default) must work with empty env.
 prefix_for() {
   case "$1" in
-    supabase) echo "${SUPABASE_URL%/}/storage/v1/object/public/${SUPABASE_BUCKET}/" ;;
-    r2)       echo "${R2_PUBLIC_BASE%/}/" ;;
+    supabase)
+      : "${SUPABASE_URL:?repoint involves supabase: set SUPABASE_URL (or source .env)}"
+      echo "${SUPABASE_URL%/}/storage/v1/object/public/${SUPABASE_BUCKET:-museum-media}/" ;;
+    r2)
+      : "${R2_PUBLIC_BASE:?repoint involves r2: set R2_PUBLIC_BASE (or source .env)}"
+      echo "${R2_PUBLIC_BASE%/}/" ;;
     local)    echo "/uploads/" ;;
     *) echo "unknown backend: $1" >&2; exit 1 ;;
   esac
