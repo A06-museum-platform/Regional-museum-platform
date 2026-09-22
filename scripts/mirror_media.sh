@@ -6,6 +6,7 @@
 #   ./scripts/mirror_media.sh --from volume --dest r2    # uploads volume -> R2
 #   ./scripts/mirror_media.sh --from volume              # uploads volume -> local mirror dir
 #   ./scripts/mirror_media.sh --from r2 --dest volume    # R2 -> uploads volume (failback to local)
+#   ./scripts/mirror_media.sh --from volume --dest supabase  # uploads volume -> Supabase (failback from local)
 # Requires: rclone with S3 remotes named `supabase` and `r2`
 # (Supabase S3 endpoint + R2 S3 endpoint; see docs/runbooks/media-ops.md).
 # Volume transfers use `docker cp` (no extra dependencies) and need the
@@ -35,6 +36,7 @@ case "$FROM->$DEST" in
   volume-\>r2)        mkdir -p "$MIRROR_DIR/volume"; docker compose cp "backend:/app/uploads/." "$MIRROR_DIR/volume/"; rclone sync "$MIRROR_DIR/volume" r2:museum-media --log-file "$LOG" --log-format date,time ;;
   r2-\>volume)        docker compose up -d backend > /dev/null; rclone sync r2:museum-media "$MIRROR_DIR/volume" --log-file "$LOG" --log-format date,time; docker compose cp "$MIRROR_DIR/volume/." backend:/app/uploads/ ;;
   supabase-\>volume)  docker compose up -d backend > /dev/null; rclone sync supabase:museum-media "$MIRROR_DIR/volume" --log-file "$LOG" --log-format date,time; docker compose cp "$MIRROR_DIR/volume/." backend:/app/uploads/ ;;
+  volume-\>supabase)  mkdir -p "$MIRROR_DIR/volume"; docker compose cp "backend:/app/uploads/." "$MIRROR_DIR/volume/"; rclone sync "$MIRROR_DIR/volume" supabase:museum-media --log-file "$LOG" --log-format date,time ;;
   *) echo "unsupported: --from $FROM --dest $DEST"; echo "from: supabase|r2|volume   dest: local|r2|supabase|volume"; exit 1 ;;
 esac
 echo "[$(date +%F_%T)] mirror $FROM -> $DEST OK" | tee -a "$LOG"

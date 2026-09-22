@@ -146,6 +146,11 @@ def test_s3_storage_mocked():
         )
         import anyio
 
+        # R2 rejects SigV4 signatures outside region "auto" — assert the
+        # client is constructed so, or live uploads fail while mocks pass.
+        _, kwargs = fake_boto3.client.call_args
+        assert kwargs.get("region_name") == "auto"
+
         url = anyio.run(store.upload, "uploads/a/b.jpg", b"data", "image/jpeg")
         assert url.endswith("/uploads/a/b.jpg")
         fake_client.put_object.assert_called_once()

@@ -23,6 +23,13 @@ docker compose cp "$DUMP" db:/tmp/restore.dump
 docker compose exec -T db pg_restore -U museum -d museum /tmp/restore.dump
 docker compose exec -T db rm /tmp/restore.dump
 
+# An older snapshot can predate the current code (e.g. no media_asset.storage
+# yet) — bring the schema forward BEFORE the backend boots, or a valid
+# backup produces an unusable deployment. The tracker baselines whatever the
+# dump already contains, so this is safe on current-schema restores too.
+echo "Applying pending migrations ..."
+./scripts/apply_migrations.sh
+
 echo "Restarting backend..."
 docker compose up -d backend > /dev/null
 echo "Smoke check:"

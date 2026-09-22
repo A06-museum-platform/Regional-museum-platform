@@ -192,9 +192,14 @@ class S3Storage:
 
         self.bucket = bucket
         self.public_base = r2_public_base(endpoint, bucket, public_base)
+        # R2 signs S3 requests for the `auto` region. boto3's default
+        # (us-east-1) produces signatures R2 rejects — the live path would
+        # fail while mocked tests pass, exactly the kind of gap that only
+        # shows up during an outage.
         self._client = boto3.client(
             "s3",
             endpoint_url=endpoint,
+            region_name="auto",
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
         )

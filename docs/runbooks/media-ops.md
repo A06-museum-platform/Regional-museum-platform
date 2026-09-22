@@ -103,6 +103,29 @@ MEDIA_BACKEND=r2 docker compose up -d backend
 SUPABASE_URL=... R2_PUBLIC_BASE=... ./scripts/repoint_media_urls.sh r2 supabase
 MEDIA_BACKEND=supabase docker compose up -d backend
 ```
+
+### 5b. Flip-to-local branch (R2 unbuilt, or fully-offline demo)
+
+Flipping to `local` without this branch leaves old rows pointing at the
+dead cloud backend AND an empty volume — old media still fails. The local
+branch has three steps where the R2 branch has two:
+
+```bash
+# 0. Populate the volume first (bytes must exist before URLs point at them):
+./scripts/mirror_media.sh --from supabase --dest volume
+# 1. Repoint existing rows supabase -> local:
+SUPABASE_URL=... ./scripts/repoint_media_urls.sh supabase local
+# 2. Flip serving to local:
+MEDIA_BACKEND=local docker compose up -d backend
+# ... verify: upload → 201, old pages render from /uploads/…, then:
+# Failback: mirror volume -> supabase, repoint local -> supabase, flip back:
+./scripts/mirror_media.sh --from volume --dest supabase
+SUPABASE_URL=... ./scripts/repoint_media_urls.sh local supabase
+MEDIA_BACKEND=supabase docker compose up -d backend
+```
+Note: `mirror_media.sh --from volume` uses `docker cp` (no rclone, no
+cloud), so this whole branch works with zero keys — it is the offline
+demo path. Log drills alongside §5 above.
 Rehearse both directions once per milestone; log date + result here:
 - _Flip drill: ____-__-__ by ____ → result: _____
 - _Failback drill: ____-__-__ by ____ → result: _____
