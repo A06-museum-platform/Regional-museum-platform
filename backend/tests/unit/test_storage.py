@@ -57,3 +57,94 @@ def test_public_url_shape():
 def test_storage_requires_credentials():
     with pytest.raises(StorageNotConfigured):
         SupabaseStorage("", "", "museum-media")
+
+
+def test_local_roundtrip(tmp_path):
+    import anyio
+
+    from app.services.storage import LocalStorage
+
+    store = LocalStorage(str(tmp_path))
+    url = anyio.run(store.upload, "uploads/events/1/a.jpg", b"bytes", "image/jpeg")
+    assert url == "/uploads/uploads/events/1/a.jpg"
+    assert (tmp_path / "uploads/events/1/a.jpg").read_bytes() == b"bytes"
+    anyio.run(store.remove, "uploads/events/1/a.jpg")
+    assert not (tmp_path / "uploads/events/1/a.jpg").exists()
+    # Removing twice / path traversal never raises.
+    anyio.run(store.remove, "uploads/events/1/a.jpg")
+    anyio.run(store.remove, "../escape.jpg")
+
+
+def test_factory_selection(tmp_path):
+    from types import SimpleNamespace
+
+    from app.services.storage import (
+        LocalStorage,
+        S3Storage,
+        SupabaseStorage,
+        get_storage,
+    )
+
+    assert isinstance(
+        get_storage(SimpleNamespace(media_backend="local", local_upload_dir=str(tmp_path))),
+        LocalStorage,
+    )
+    assert isinstance(
+        get_storage(
+            SimpleNamespace(
+                media_backend="supabase",
+                supabase_url="https://x.supabase.co",
+                supabase_service_key="k",
+                supabase_bucket="b",
+            )
+        ),
+        SupabaseStorage,
+    )
+    with pytest.raises(StorageNotConfigured):
+        get_storage(
+            SimpleNamespace(
+                media_backend="supabase",
+                supabase_url="",
+                supabase_service_key="",
+                supabase_bucket="b",
+            )
+        )
+
+
+def test_s3_storage_mocked():
+    import sys
+    from types import ModuleType, SimpleNamespace
+    from unittest.mock import MagicMock
+
+    fake_boto3 = ModuleType("boto3")
+    fake_client = MagicMock()
+    fake_boto3.client = MagicMock(return_value=fake_client)
+    sys.modules["boto3"] = fake_boto3
+    try:
+        from app.services.storage import S3Storage, get_storage
+
+        store = S3Storage("https://acc.r2.cloudflarestorage.com", "ak", "sk", "media")
+        assert store.public_url("uploads/a/b.jpg") == (
+            "https://media.acc.r2.cloudflarestorage.com/uploads/a/b.jpg"
+        )
+        import anyio
+
+        url = anyio.run(store.upload, "uploads/a/b.jpg", b"data", "image/jpeg")
+        assert url.endswith("/uploads/a/b.jpg")
+        fake_client.put_object.assert_called_once()
+        anyio.run(store.remove, "uploads/a/b.jpg")
+        fake_client.delete_object.assert_called_once()
+
+        via_factory = get_storage(
+            SimpleNamespace(
+                media_backend="r2",
+                r2_endpoint="https://acc.r2.cloudflarestorage.com",
+                r2_access_key="ak",
+                r2_secret_key="sk",
+                r2_bucket="media",
+                r2_public_base="",
+            )
+        )
+        assert isinstance(via_factory, S3Storage)
+    finally:
+        del sys.modules["boto3"]

@@ -49,6 +49,7 @@ class _FakeDB:
                     "event_id": None,
                     "url": "https://cdn.example/9.jpg",
                     "media_type": "image",
+                    "storage": "supabase",
                     "sort_order": 0,
                     "is_primary": True,
                     "created_at": None,
@@ -92,13 +93,19 @@ def _client(staff=None, db=None, storage=None):
 
     app.dependency_overrides[session_mod.get_session] = fake_session
     app.dependency_overrides[deps.require_staff] = fake_staff
-    m._storage = lambda: storage or _FakeStorage()  # noqa: E731
+    m._storage = lambda: (storage or _FakeStorage(), "supabase")  # noqa: E731
     return TestClient(app)
 
 
 def _row(media_id=3):
     return type(
-        "Row", (), {"media_id": media_id, "url": "https://cdn.example/3.jpg"}
+        "Row",
+        (),
+        {
+            "media_id": media_id,
+            "url": "https://cdn.example/3.jpg",
+            "storage": "supabase",
+        },
     )()
 
 
