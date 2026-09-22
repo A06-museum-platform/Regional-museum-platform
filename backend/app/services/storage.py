@@ -1,11 +1,16 @@
-"""Supabase Storage client over plain httpx (no supabase-py dependency).
+"""Storage backends behind one interface (design: docs/design/media-storage.md).
+
+- SupabaseStorage: primary, plain httpx REST (no supabase-py dependency).
+- S3Storage: warm standby for Cloudflare R2 (S3 API via boto3).
+- LocalStorage: last-resort fallback, docker volume + StaticFiles.
 
 Business rules live here, not in route handlers (CONTRIBUTING.md):
-file validation, storage key layout, upload/delete against the
-Storage REST API. Postgres only ever stores the public URL.
+file validation, storage key layout, upload/delete. Postgres only ever
+stores the public URL (or local path); see media_asset.storage.
 """
 
 import uuid
+from pathlib import Path
 from typing import Optional
 
 import httpx
@@ -116,3 +121,96 @@ class SupabaseStorage:
                 f"{self.url}/storage/v1/object/{self.bucket}/{key}",
                 headers=self._headers,
             )
+
+
+class LocalStorage:
+    """Fallback backend: files on a docker volume, served by StaticFiles
+    mounted at /uploads (see main.py). URLs are paths, resolved by the
+    frontend against the API origin (media.js resolveMediaUrl)."""
+
+    def __init__(self, root: str = "/app/uploads"):
+        self.root = Path(root)
+        self.root.mkdir(parents=True, exist_ok=True)
+
+    def public_url(self, key: str) -> str:
+        return f"/uploads/{key}"
+
+    async def upload(self, key: str, data: bytes, content_type: str) -> str:
+        dest = self.root / key
+        if ".." in Path(key).parts:
+            raise UploadRejected("Invalid storage key.")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(data)
+        return self.public_url(key)
+
+    async def remove(self, key: str) -> None:
+        dest = self.root / key
+        if ".." in Path(key).parts:
+            return
+        try:
+            dest.unlink()
+        except FileNotFoundError:
+            pass
+
+
+class S3Storage:
+    """Warm-standby backend for Cloudflare R2 (or any S3 API target).
+    Bucket must be public-read; credentials are a scoped R2 API token."""
+
+    def __init__(
+        self,
+        endpoint: str,
+        access_key: str,
+        secret_key: str,
+        bucket: str,
+        public_base: str = "",
+    ):
+        if not endpoint or not access_key or not secret_key:
+            raise StorageNotConfigured()
+        import boto3
+
+        self.bucket = bucket
+        # Default: R2 bucket subdomain (...r2.dev or account endpoint).
+        # Set public_base explicitly when using a custom domain.
+        self.public_base = public_base.rstrip("/") or endpoint.rstrip("/").replace(
+            "https://", f"https://{bucket}."
+        )
+        self._client = boto3.client(
+            "s3",
+            endpoint_url=endpoint,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+        )
+
+    def public_url(self, key: str) -> str:
+        return f"{self.public_base}/{key}"
+
+    async def upload(self, key: str, data: bytes, content_type: str) -> str:
+        self._client.put_object(
+            Bucket=self.bucket, Key=key, Body=data, ContentType=content_type
+        )
+        return self.public_url(key)
+
+    async def remove(self, key: str) -> None:
+        self._client.delete_object(Bucket=self.bucket, Key=key)
+
+
+def get_storage(settings):
+    """Factory honoring MEDIA_BACKEND. Raises StorageNotConfigured (→503)
+    when the selected backend lacks credentials. 'local' never fails."""
+    mode = (settings.media_backend or "supabase").lower()
+    if mode == "local":
+        return LocalStorage(settings.local_upload_dir)
+    if mode == "r2":
+        return S3Storage(
+            settings.r2_endpoint,
+            settings.r2_access_key,
+            settings.r2_secret_key,
+            settings.r2_bucket,
+            settings.r2_public_base,
+        )
+    return SupabaseStorage(
+        settings.supabase_url,
+        settings.supabase_service_key,
+        settings.supabase_bucket,
+    )
