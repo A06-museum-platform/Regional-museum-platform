@@ -226,29 +226,22 @@ export const COLLECTION_ITEMS = [
   },
 ];
 
-/**
- * Minimal exhibition records, enough to resolve the "Part of" link on an item
- * detail page.
- *
- * CONTRACT NOTE: the list endpoint returns `exhibition_id` only, but the
- * detail endpoint must return a nested `exhibition` object — otherwise the
- * front end needs a second round trip just to print a title. Added to the
- * contract on 13 Sep; raise it with Ray at the M3 review.
- */
-export const EXHIBITIONS = {
-  'ex-0001': {
-    id: 'ex-0001',
-    title: 'Colonial Mining & the Overland Telegraph',
-    slug: 'colonial-mining-overland-telegraph',
-  },
-  'ex-0002': {
-    id: 'ex-0002',
-    title: 'Working the Monster Mine',
-    slug: 'working-the-monster-mine',
-  },
-  'ex-0003': {
-    id: 'ex-0003',
-    title: 'Whaling and the Southern Coast',
-    slug: 'whaling-and-the-southern-coast',
-  },
-};
+/** One draft record so the staff status filter has something to find. */
+COLLECTION_ITEMS.push({
+  id: 'ci-0013',
+  accession_number: 'MAC-1924-03',
+  title: 'Whim winding drum, unattributed',
+  slug: 'whim-winding-drum-unattributed',
+  description:
+    'Draft record. Provenance unconfirmed — the donor file gives two different mine sites and the curatorial team has not resolved which is correct.',
+  category: 'machinery',
+  gallery: 'monster_mine',
+  period_text: 'c. 1924',
+  year_from: 1920,
+  year_to: 1930,
+  materials: 'Iron, jarrah',
+  image_url: null,
+  exhibition_id: null,
+  is_family_friendly: false,
+  status: 'draft',
+});

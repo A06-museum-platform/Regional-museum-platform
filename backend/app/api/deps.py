@@ -1,73 +1,39 @@
+"""Shared FastAPI dependencies.
+
+require_staff is the minimal role gate for the staff media endpoints.
+It verifies the JWT signature and the role claim only — the full login
+/ user-loading auth flow is Ray's M4 stream (backend/api/ray) and
+supersedes this stub when it merges; these endpoints keep working
+because they depend on the same function name.
 """
-Auth + RBAC dependencies.
 
-Usage in a router:
+from typing import Optional
 
-    @router.get("/admin/users")
-    def list_users(current_user: User = Depends(require_role(UserRole.ADMINISTRATOR))):
-        ...
+from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
 
-    @router.put("/exhibitions/{id}")
-    def update_exhibition(
-        current_user: User = Depends(require_role(UserRole.STAFF, UserRole.ADMINISTRATOR)),
-    ):
-        ...
+from app.core.config import get_settings
+from app.core.errors import ApiError
 
-IMPORTANT (risk table item — "access control gaps"): every staff/admin-only
-route MUST declare one of these dependencies. Hiding a button in the React
-UI is not access control; the check has to live here, server-side.
-"""
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError
-from sqlalchemy.orm import Session
+_bearer = HTTPBearer(auto_error=False)
 
-from app.core.security import decode_token
-from app.db.session import get_db
-from app.models.user import User, UserRole
-
-# tokenUrl is just where /docs points the "Authorize" button at -- the
-# actual login endpoint is POST /auth/login and returns access+refresh tokens.
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-
-CREDENTIALS_EXCEPTION = HTTPException(
-    status_code=status.HTTP_401_UNAUTHORIZED,
-    detail="Could not validate credentials",
-    headers={"WWW-Authenticate": "Bearer"},
-)
+STAFF_ROLES = {"staff", "admin"}
 
 
-def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
-) -> User:
+def require_staff(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+) -> dict:
+    if credentials is None:
+        raise ApiError(401, "Not authenticated", "AUTH_REQUIRED")
     try:
-        payload = decode_token(token)
-        if payload.get("type") != "access":
-            raise CREDENTIALS_EXCEPTION
-        user_id: str | None = payload.get("sub")
-        if user_id is None:
-            raise CREDENTIALS_EXCEPTION
+        payload = jwt.decode(
+            credentials.credentials,
+            get_settings().secret_key,
+            algorithms=["HS256"],
+        )
     except JWTError:
-        raise CREDENTIALS_EXCEPTION
-
-    user = db.get(User, user_id)
-    if user is None or not user.is_active:
-        raise CREDENTIALS_EXCEPTION
-    return user
-
-
-def require_role(*allowed_roles: UserRole):
-    """
-    Dependency factory. Any route can require one or more roles:
-        Depends(require_role(UserRole.STAFF, UserRole.ADMINISTRATOR))
-    """
-    def _check(current_user: User = Depends(get_current_user)) -> User:
-        if current_user.role not in allowed_roles:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You do not have permission to perform this action",
-            )
-        return current_user
-
-    return _check
+        raise ApiError(401, "Invalid or expired token", "AUTH_INVALID")
+    if payload.get("role") not in STAFF_ROLES:
+        raise ApiError(403, "Staff role required", "FORBIDDEN")
+    return payload

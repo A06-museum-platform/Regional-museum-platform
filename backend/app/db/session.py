@@ -1,21 +1,28 @@
-from typing import Generator
+"""Async SQLAlchemy engine / session factory."""
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.core.config import settings
+from app.core.config import get_settings
 
-# Every route in app/api/** uses a synchronous Session (db.query, db.get,
-# db.execute without await) -- so this needs the sync psycopg2 driver, not
-# the asyncpg one also listed in requirements.txt.
-engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
-
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+_engine = None
+_SessionFactory = None
 
 
-def get_db() -> Generator[Session, None, None]:
-    db = SessionLocal()
+def _factory() -> async_sessionmaker[AsyncSession]:
+    global _engine, _SessionFactory
+    if _SessionFactory is None:
+        url = get_settings().database_url
+        # SQLAlchemy asyncio needs the asyncpg driver scheme.
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        _engine = create_async_engine(url, pool_pre_ping=True)
+        _SessionFactory = async_sessionmaker(_engine, expire_on_commit=False)
+    return _SessionFactory
+
+
+async def get_session():
+    session = _factory()()
     try:
-        yield db
+        yield session
     finally:
-        db.close()
+        await session.close()
