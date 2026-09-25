@@ -21,19 +21,32 @@ _bearer = HTTPBearer(auto_error=False)
 STAFF_ROLES = {"staff", "admin"}
 
 
-def require_staff(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
-) -> dict:
+def _decode(credentials: Optional[HTTPAuthorizationCredentials]) -> dict:
     if credentials is None:
         raise ApiError(401, "Not authenticated", "AUTH_REQUIRED")
     try:
-        payload = jwt.decode(
+        return jwt.decode(
             credentials.credentials,
             get_settings().secret_key,
             algorithms=["HS256"],
         )
     except JWTError:
         raise ApiError(401, "Invalid or expired token", "AUTH_INVALID")
+
+
+def require_staff(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+) -> dict:
+    payload = _decode(credentials)
     if payload.get("role") not in STAFF_ROLES:
         raise ApiError(403, "Staff role required", "FORBIDDEN")
+    return payload
+
+
+def require_admin(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+) -> dict:
+    payload = _decode(credentials)
+    if payload.get("role") != "admin":
+        raise ApiError(403, "Admin access required", "FORBIDDEN")
     return payload
