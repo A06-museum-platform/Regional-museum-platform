@@ -12,6 +12,11 @@ export default defineConfig({
         target: 'http://backend:8000',
         changeOrigin: true,
       },
+      // Local-fallback uploads served by FastAPI StaticFiles (MEDIA_BACKEND=local).
+      '/uploads': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+      },
     },
   },
 })

@@ -1,14 +1,40 @@
-"""Supabase Storage client over plain httpx (no supabase-py dependency).
+"""Storage backends behind one interface (design: docs/design/media-storage.md).
+
+- SupabaseStorage: primary, plain httpx REST (no supabase-py dependency).
+- S3Storage: warm standby for Cloudflare R2 (S3 API via boto3).
+- LocalStorage: last-resort fallback, docker volume + StaticFiles.
 
 Business rules live here, not in route handlers (CONTRIBUTING.md):
-file validation, storage key layout, upload/delete against the
-Storage REST API. Postgres only ever stores the public URL.
+file validation, storage key layout, upload/delete. Postgres only ever
+stores the public URL (or local path); see media_asset.storage.
 """
 
 import uuid
+from pathlib import Path
 from typing import Optional
 
+import anyio
 import httpx
+
+MEDIA_BACKENDS = ("supabase", "r2", "local")
+
+
+def r2_public_base(endpoint: str, bucket: str, public_base: str = "") -> str:
+    """Single source of truth for R2 public URLs, shared by upload and
+    delete-path key extraction so the two can never drift apart.
+
+    R2's S3 *API* endpoint does not serve browsers — a public base (the
+    bucket's r2.dev subdomain or a custom domain, Dashboard → R2 →
+    Settings) is required. Failing fast here beats storing URLs nobody
+    can fetch.
+    """
+    base = (public_base or "").rstrip("/")
+    if not base:
+        raise StorageNotConfigured(
+            "R2 public base URL is not configured. Set R2_PUBLIC_BASE to "
+            "the bucket's public r2.dev subdomain or custom domain."
+        )
+    return base
 
 IMAGE_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 VIDEO_CONTENT_TYPES = {"video/mp4", "video/webm"}
@@ -31,9 +57,9 @@ class UploadRejected(ValueError):
 
 
 class StorageNotConfigured(RuntimeError):
-    def __init__(self):
-        super().__init__("Supabase storage is not configured")
-        self.detail = "Media uploads are not configured on this server"
+    def __init__(self, detail: str = "Media uploads are not configured on this server"):
+        super().__init__(detail)
+        self.detail = detail
         self.code = "STORAGE_NOT_CONFIGURED"
 
 
@@ -116,3 +142,122 @@ class SupabaseStorage:
                 f"{self.url}/storage/v1/object/{self.bucket}/{key}",
                 headers=self._headers,
             )
+
+
+class LocalStorage:
+    """Fallback backend: files on a docker volume, served by StaticFiles
+    mounted at /uploads (see main.py). URLs are paths, resolved by the
+    frontend against the API origin (media.js resolveMediaUrl)."""
+
+    def __init__(self, root: str = "/app/uploads"):
+        self.root = Path(root)
+        self.root.mkdir(parents=True, exist_ok=True)
+
+    def public_url(self, key: str) -> str:
+        return f"/uploads/{key}"
+
+    async def upload(self, key: str, data: bytes, content_type: str) -> str:
+        dest = self.root / key
+        if ".." in Path(key).parts:
+            raise UploadRejected("Invalid storage key.")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(data)
+        return self.public_url(key)
+
+    async def remove(self, key: str) -> None:
+        dest = self.root / key
+        if ".." in Path(key).parts:
+            return
+        try:
+            dest.unlink()
+        except FileNotFoundError:
+            pass
+
+
+class S3Storage:
+    """Warm-standby backend for Cloudflare R2 (or any S3 API target).
+    Bucket must be public-read; credentials are a scoped R2 API token."""
+
+    def __init__(
+        self,
+        endpoint: str,
+        access_key: str,
+        secret_key: str,
+        bucket: str,
+        public_base: str = "",
+    ):
+        if not endpoint or not access_key or not secret_key:
+            raise StorageNotConfigured()
+        import boto3
+
+        self.bucket = bucket
+        self.public_base = r2_public_base(endpoint, bucket, public_base)
+        # R2 signs S3 requests for the `auto` region. boto3's default
+        # (us-east-1) produces signatures R2 rejects — the live path would
+        # fail while mocked tests pass, exactly the kind of gap that only
+        # shows up during an outage.
+        self._client = boto3.client(
+            "s3",
+            endpoint_url=endpoint,
+            region_name="auto",
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+        )
+
+    def public_url(self, key: str) -> str:
+        return f"{self.public_base}/{key}"
+
+    async def upload(self, key: str, data: bytes, content_type: str) -> str:
+        # boto3 is synchronous: never block the event loop with it. A slow
+        # R2 call would otherwise stall unrelated API traffic — exactly the
+        # wrong failure mode for the backend meant to survive outages.
+        await anyio.to_thread.run_sync(
+            lambda: self._client.put_object(
+                Bucket=self.bucket, Key=key, Body=data, ContentType=content_type
+            )
+        )
+        return self.public_url(key)
+
+    async def remove(self, key: str) -> None:
+        await anyio.to_thread.run_sync(
+            lambda: self._client.delete_object(Bucket=self.bucket, Key=key)
+        )
+
+
+def build_storage(mode, settings):
+    """Build the backend named by `mode` (not necessarily the active one).
+    Delete paths use this with the ROW's stored backend: after a flip, old
+    rows still live where they were written, and removing via the current
+    backend would target the wrong system with the wrong key.
+    """
+    mode = (mode or "local").lower()
+    if mode not in MEDIA_BACKENDS:
+        raise ValueError(
+            f"Unsupported storage backend={mode!r}. "
+            f"Expected one of: {', '.join(MEDIA_BACKENDS)}."
+        )
+    if mode == "local":
+        return LocalStorage(settings.local_upload_dir)
+    if mode == "r2":
+        return S3Storage(
+            settings.r2_endpoint,
+            settings.r2_access_key,
+            settings.r2_secret_key,
+            settings.r2_bucket,
+            settings.r2_public_base,
+        )
+    return SupabaseStorage(
+        settings.supabase_url,
+        settings.supabase_service_key,
+        settings.supabase_bucket,
+    )
+
+
+def get_storage(settings):
+    """Factory honoring MEDIA_BACKEND. Raises StorageNotConfigured (→503)
+    when the selected backend lacks credentials. 'local' never fails.
+    Unknown modes raise ValueError (also rejected at startup by the
+    Settings validator) — never silently fall through to Supabase, which
+    would upload bytes and then fail the storage CHECK, orphaning objects.
+    """
+    return build_storage(settings.media_backend, settings)

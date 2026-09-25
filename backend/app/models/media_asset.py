@@ -1,4 +1,4 @@
-"""MediaAsset model — mirrors database/migrations/002_media_assets.sql."""
+"""MediaAsset model — mirrors migrations 002 + 003_media_storage_backend.sql."""
 
 from datetime import datetime
 from typing import Optional
@@ -24,6 +24,7 @@ class MediaAsset(Base):
     )
     url: Mapped[str] = mapped_column(Text, nullable=False)
     media_type: Mapped[str] = mapped_column(nullable=False)  # 'image' | 'video'
+    storage: Mapped[str] = mapped_column(nullable=False, default="remote")
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     uploaded_by: Mapped[Optional[int]] = mapped_column(

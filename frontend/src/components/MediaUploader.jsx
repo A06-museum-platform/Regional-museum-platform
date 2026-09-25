@@ -6,7 +6,7 @@
  *                  onUploaded={(media) => ...} />
  */
 import { useRef, useState } from 'react';
-import { deleteMedia, listMedia, uploadMedia } from '../api/media.js';
+import { deleteMedia, listMedia, resolveMediaUrl, uploadMedia } from '../api/media.js';
 import styles from './MediaUploader.module.css';
 
 export default function MediaUploader({ ownerType, ownerId, onUploaded }) {
@@ -83,9 +83,9 @@ export default function MediaUploader({ ownerType, ownerId, onUploaded }) {
         {(items ?? []).map((item) => (
           <figure key={item.media_id} className={styles.thumb}>
             {item.media_type === 'video' ? (
-              <video src={item.url} muted playsInline />
+              <video src={resolveMediaUrl(item.url)} muted playsInline />
             ) : (
-              <img src={item.url} alt="" loading="lazy" />
+              <img src={resolveMediaUrl(item.url)} alt="" loading="lazy" />
             )}
             <figcaption>
               {item.is_primary && <span>Primary</span>}

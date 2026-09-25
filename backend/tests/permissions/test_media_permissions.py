@@ -49,6 +49,7 @@ class _FakeDB:
                     "event_id": None,
                     "url": "https://cdn.example/9.jpg",
                     "media_type": "image",
+                    "storage": "supabase",
                     "sort_order": 0,
                     "is_primary": True,
                     "created_at": None,
@@ -92,13 +93,44 @@ def _client(staff=None, db=None, storage=None):
 
     app.dependency_overrides[session_mod.get_session] = fake_session
     app.dependency_overrides[deps.require_staff] = fake_staff
-    m._storage = lambda: storage or _FakeStorage()  # noqa: E731
+    m._storage = lambda: (storage or _FakeStorage(), "supabase")  # noqa: E731
     return TestClient(app)
+
+
+def test_delete_uses_row_backend_not_current_mode():
+    """After a flip, old rows still live where written: the delete client
+    must be built from row.storage, not the current MEDIA_BACKEND (which
+    resolves to 'local' in this keyless test env)."""
+    from app.api.staff import media as m
+
+    calls = []
+
+    class Spy:
+        def __init__(self, name):
+            self.name = name
+
+        async def remove(self, key):
+            calls.append((self.name, key))
+
+    orig = m._backend_for
+    m._backend_for = lambda name: Spy(name)  # noqa: E731
+    try:
+        client = _client(staff=STAFF, db=_FakeDB(media_rows=[_row()]))
+        assert client.delete("/api/staff/media/3").status_code == 204
+    finally:
+        m._backend_for = orig
+    assert calls == [("supabase", "https://cdn.example/3.jpg")]
 
 
 def _row(media_id=3):
     return type(
-        "Row", (), {"media_id": media_id, "url": "https://cdn.example/3.jpg"}
+        "Row",
+        (),
+        {
+            "media_id": media_id,
+            "url": "https://cdn.example/3.jpg",
+            "storage": "supabase",
+        },
     )()
 
 
