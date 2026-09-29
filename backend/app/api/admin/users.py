@@ -3,8 +3,10 @@
 GET /api/users -> paginated {items, total, page, size}
 
 Each user's role is taken from user_role/role (a user can hold more
-than one role; this picks the lowest role_id, i.e. the first one
-assigned). is_active / access_status from the contract aren't in
+than one role; this picks the highest-privilege one -- admin > staff >
+member > visitor, ranked by name rather than role_id -- matching the
+login flow in app/services/auth_service.py) and lower-cased to match the
+login response. is_active / access_status from the contract aren't in
 database/migrations/001_initial_schema.sql yet -- user_account has no
 such column -- so they're left out here rather than faked.
 """
@@ -35,7 +37,10 @@ async def list_users(
                 " (SELECT r.role_name FROM user_role ur "
                 "   JOIN role r ON r.role_id = ur.role_id "
                 "  WHERE ur.user_id = u.user_id "
-                "  ORDER BY r.role_id LIMIT 1) AS role_name, "
+                "  ORDER BY CASE lower(r.role_name) "
+                "    WHEN 'admin' THEN 4 WHEN 'staff' THEN 3 "
+                "    WHEN 'member' THEN 2 ELSE 1 END DESC "
+                "  LIMIT 1) AS role_name, "
                 " COUNT(*) OVER() AS total_count "
                 "FROM user_account u "
                 "ORDER BY u.user_id "
@@ -51,7 +56,7 @@ async def list_users(
             id=row.user_id,
             email=row.email,
             display_name=f"{row.first_name} {row.last_name}",
-            role=row.role_name or "member",
+            role=(row.role_name or "member").lower(),
         )
         for row in rows
     ]
