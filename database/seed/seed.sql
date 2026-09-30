@@ -19,16 +19,22 @@ VALUES
 
 -- =========================================================
 -- 2. User Accounts
--- Password hashes below are placeholder values for prototype
+-- Real bcrypt hashes from app.core.security.hash_password() so the
+-- seed accounts can log in. Demo passwords (also listed in README.md):
+--   alice@example.com  Visitor123!
+--   ben@example.com    Member123!
+--   staff@museum.org   Staff123!
+--   admin@museum.org   Admin123!
+-- Demo-only credentials -- never reuse outside local development.
 -- =========================================================
 
 INSERT INTO user_account
 (email, password_hash, first_name, last_name, phone)
 VALUES
-('alice@example.com', 'placeholder_hash_1', 'Alice', 'Brown', '0400000001'),
-('ben@example.com', 'placeholder_hash_2', 'Ben', 'Wilson', '0400000002'),
-('staff@museum.org', 'placeholder_hash_3', 'Emma', 'Taylor', '0400000003'),
-('admin@museum.org', 'placeholder_hash_4', 'James', 'Anderson', '0400000004');
+('alice@example.com', '$2b$12$GDFSxsIKPNndzuKZ5jAGsOl//CZZJDcmONdymmXtKCpQfVDZuMLEG', 'Alice', 'Brown', '0400000001'),
+('ben@example.com', '$2b$12$Z2igVArIb8BfJDfOpdOap.XpJF5hlnc.nAnA8yFXanKMDLpLU/kJS', 'Ben', 'Wilson', '0400000002'),
+('staff@museum.org', '$2b$12$GLnBK/K/TTYGJl1EDaxhmOM8KDM80K8uNhlbAY8UrVSL7niNASWi.', 'Emma', 'Taylor', '0400000003'),
+('admin@museum.org', '$2b$12$TYa4vQYE9A6z.4uXlwn4GOvFx/TBUx85aA6oXKbTetNbQHSjbQQju', 'James', 'Anderson', '0400000004');
 
 
 -- =========================================================

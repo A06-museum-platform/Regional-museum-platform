@@ -24,6 +24,21 @@ Then seed placeholder data:
 python scripts/seed_database.py
 ```
 
+## Demo accounts
+
+`database/seed/seed.sql` creates one account per role. The passwords are
+for local demos only.
+
+| Role | Email | Password | After login |
+|---|---|---|---|
+| Visitor | alice@example.com | `Visitor123!` | Home page |
+| Member | ben@example.com | `Member123!` | `/account` (Ben holds Visitor + Member; the higher role wins) |
+| Staff | staff@museum.org | `Staff123!` | `/staff` |
+| Administrator | admin@museum.org | `Admin123!` | `/staff` |
+
+To see the 403 page, sign in as Alice or Ben and open `/staff`, or as
+Emma (staff) and open an `/admin/...` page such as `/admin/members`.
+
 ## Repository layout
 
 | Folder | Responsibility |
