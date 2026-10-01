@@ -13,6 +13,19 @@ const PATHS = {
   'event': 'events',
 };
 
+/**
+ * Resolve a stored media URL to something an <img> can use.
+ * Absolute http(s) URLs (Supabase/R2/seed placeholders) pass through;
+ * local-mode paths (/uploads/...) are served by the backend, so they are
+ * resolved against the API origin (Vite proxies /uploads in dev).
+ */
+export function resolveMediaUrl(url) {
+  if (!url) return url;
+  if (/^https?:\/\//i.test(url)) return url;
+  const origin = new URL(BASE_URL, window.location.origin).origin;
+  return `${origin}${url.startsWith('/') ? url : `/${url}`}`;
+}
+
 async function uploadFetch(path, { method = 'GET', form } = {}) {
   const headers = {};
   const token = getToken();

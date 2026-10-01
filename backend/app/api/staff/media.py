@@ -22,15 +22,19 @@ from app.db.session import get_session
 from app.schemas.media import MediaOut, MediaUploadOut
 from app.services.storage import (
     StorageNotConfigured,
-    SupabaseStorage,
     UploadRejected,
+    build_storage,
+    get_storage,
+    r2_public_base,
     storage_key,
     validate_upload,
 )
 
 router = APIRouter(prefix="/api/staff", tags=["staff-media"])
 
-# URL segment -> (table, pk column, media_asset fk column)
+# URL segment -> (table, pk column, media_asset fk column).
+# To make a new entity ownable, add one entry here + migration 00N
+# (new FK + CHECK arm) + seeds — full recipe: docs/design/media-storage.md §5.2.
 OWNERS = {
     "collection-items": ("collection_item", "item_id", "collection_item_id"),
     "exhibitions": ("exhibition", "exhibition_id", "exhibition_id"),
@@ -38,16 +42,17 @@ OWNERS = {
 }
 
 
-def _storage() -> SupabaseStorage:
+def _storage():
     settings = get_settings()
     try:
-        return SupabaseStorage(
-            settings.supabase_url,
-            settings.supabase_service_key,
-            settings.supabase_bucket,
-        )
+        return get_storage(settings), settings.media_backend.lower()
     except StorageNotConfigured as exc:
         raise ApiError(503, exc.detail, exc.code)
+    except ValueError as exc:
+        # Unknown MEDIA_BACKEND (belt-and-braces behind the Settings
+        # validator): fail loudly before any bytes move, never silently
+        # fall through to another backend and orphan objects.
+        raise ApiError(500, str(exc), "CONFIG_ERROR")
 
 
 async def _get_owner(db: AsyncSession, owner: str, owner_id: int) -> tuple[str, str]:
@@ -70,6 +75,7 @@ def _row_to_out(row) -> MediaOut:
         event_id=row.event_id,
         url=row.url,
         media_type=row.media_type,
+        storage=row.storage,
         sort_order=row.sort_order,
         is_primary=row.is_primary,
         created_at=row.created_at,
@@ -103,8 +109,17 @@ async def upload_media(
         status_code = 413 if exc.code == "FILE_TOO_LARGE" else 400
         raise ApiError(status_code, exc.detail, exc.code)
 
-    store = _storage()
+    store, mode = _storage()
     _, fk = await _get_owner(db, owner, owner_id)
+
+    # JWT 'sub' is a string; uploaded_by is INTEGER. Non-numeric subs
+    # (e.g. future UUID subjects) degrade to NULL, never to a 500.
+    try:
+        uploader = (
+            int(staff.get("sub")) if staff.get("sub") is not None else None
+        )
+    except (TypeError, ValueError):
+        uploader = None
 
     key = storage_key(owner, owner_id, file.content_type)
     try:
@@ -125,11 +140,12 @@ async def upload_media(
             text(
                 "INSERT INTO media_asset "
                 "(collection_item_id, exhibition_id, event_id, url, "
-                " media_type, sort_order, is_primary, uploaded_by) "
+                " media_type, storage, sort_order, is_primary, uploaded_by) "
                 "VALUES (:item, :exhibition, :event, :url, "
-                " :media_type, :sort_order, :is_primary, :uploaded_by) "
+                " :media_type, :storage, :sort_order, :is_primary, :uploaded_by) "
                 "RETURNING media_id, collection_item_id, exhibition_id, "
-                " event_id, url, media_type, sort_order, is_primary, created_at"
+                " event_id, url, media_type, storage, sort_order, "
+                " is_primary, created_at"
             ),
             {
                 "item": owner_id if fk == "collection_item_id" else None,
@@ -137,9 +153,10 @@ async def upload_media(
                 "event": owner_id if fk == "event_id" else None,
                 "url": url,
                 "media_type": media_type,
+                "storage": mode,
                 "sort_order": sort_order,
                 "is_primary": is_primary,
-                "uploaded_by": staff.get("sub"),
+                "uploaded_by": uploader,
             },
         )
     ).first()
@@ -161,7 +178,7 @@ async def list_media(
         await db.execute(
             text(
                 "SELECT media_id, collection_item_id, exhibition_id, event_id, "
-                " url, media_type, sort_order, is_primary, created_at "
+                " url, media_type, storage, sort_order, is_primary, created_at "
                 f"FROM media_asset WHERE {fk} = :id "
                 "ORDER BY is_primary DESC, sort_order, media_id"
             ),
@@ -179,17 +196,26 @@ async def delete_media(
 ):
     row = (
         await db.execute(
-            text("SELECT media_id, url FROM media_asset WHERE media_id = :id"),
+            text(
+                "SELECT media_id, url, storage FROM media_asset "
+                "WHERE media_id = :id"
+            ),
             {"id": media_id},
         )
     ).first()
     if not row:
         raise ApiError(404, f"Media {media_id} not found", "NOT_FOUND")
     # Best effort: a missing storage object must not block row deletion.
-    try:
-        await _storage().remove(_key_from_url(row.url))
-    except Exception:
-        pass
+    # 'remote' seed rows point at third-party URLs — nothing to delete.
+    # The client is built from the ROW's backend, never the current
+    # MEDIA_BACKEND: after a flip, old rows still live where written.
+    if row.storage in ("supabase", "r2", "local"):
+        backend = _backend_for(row.storage)
+        if backend is not None:
+            try:
+                await backend.remove(_key_from_url(row.url, row.storage))
+            except Exception:
+                pass
     await db.execute(
         text("DELETE FROM media_asset WHERE media_id = :id"), {"id": media_id}
     )
@@ -197,10 +223,37 @@ async def delete_media(
     return None
 
 
-def _key_from_url(url: str) -> str:
+def _backend_for(storage_name):
+    """Delete-path client for the backend that owns the row. Returns None
+    when that backend is unusable here (no creds, unknown name) — the row
+    delete still proceeds; the orphaned object is reconciled by the next
+    mirror/repoint pass, never by blocking the request."""
+    if storage_name == "remote":
+        return None
+    try:
+        return build_storage(storage_name, get_settings())
+    except (StorageNotConfigured, ValueError):
+        return None
+
+
+def _key_from_url(url: str, storage: str) -> str:
+    """Inverse of public_url(), sharing the same base-URL helper so upload
+    and delete can never disagree about what a key looks like."""
     settings = get_settings()
-    prefix = (
-        f"{settings.supabase_url.rstrip('/')}/storage/v1/object/public/"
-        f"{settings.supabase_bucket}/"
-    )
+    if storage == "supabase":
+        prefix = (
+            f"{settings.supabase_url.rstrip('/')}/storage/v1/object/public/"
+            f"{settings.supabase_bucket}/"
+        )
+    elif storage == "r2":
+        prefix = (
+            r2_public_base(
+                settings.r2_endpoint, settings.r2_bucket, settings.r2_public_base
+            )
+            + "/"
+        )
+    elif storage == "local":
+        prefix = "/uploads/"
+    else:
+        return url
     return url[len(prefix):] if url.startswith(prefix) else url

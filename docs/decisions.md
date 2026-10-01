@@ -1,5 +1,32 @@
 # Decision log
 
+## 2026-09-22 — Media failover: explicit `MEDIA_BACKEND` switch (local + R2 standbys)
+
+**Context.** Tutor asked for a total-backup story: what happens when
+Supabase is down, and where the second copy lives. Constraint: free-tier
+clouds only, simpler-the-better.
+
+**Decision.** One env var picks exactly one backend —
+`supabase | r2 | local` (default `local`, zero-config). No automatic
+failover: a manual flip can't split-brain, is trivially testable, and is
+demoable as a kill-switch drill. Local = docker volume + StaticFiles
+(answers the tutor's "blob in docker" with files instead of `bytea`:
+same code size, no DB bloat, direct serving). R2 = warm standby via S3
+API (10 GB permanent free, zero egress, scoped tokens); Supabase's own
+S3 endpoint lets rclone sync both ends with zero custom code.
+`media_asset.storage` records which backend holds each file; full design
+in `docs/design/media-storage.md`, operations in `docs/runbooks/media-ops.md`.
+
+**Alternatives rejected/parked.**
+- Automatic try-Supabase-catch-to-local — divergent copies, no canonical
+  source; rejected.
+- `bytea` blobs in Postgres — viable but bloats backups, needs streaming
+  endpoints, videos impractical; parked as last resort.
+- Patroni auto-failover for Postgres — consensus cluster for a prototype
+  with no availability criterion; rejected, rationale logged for tutor.
+- Azure Blob as mirror — viable but non-S3 API means a second SDK path;
+  parked; rclone destination flag reserved if the proposer owns it.
+
 ## 2026-09-19 — Media storage: Supabase Storage-only (images; video-ready)
 
 **Context.** Collections, exhibitions and events need images (multiple per

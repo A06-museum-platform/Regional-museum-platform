@@ -13,6 +13,7 @@ class MediaOut(BaseModel):
     event_id: Optional[int] = None
     url: str
     media_type: str
+    storage: str = "remote"
     sort_order: int = 0
     is_primary: bool = False
     created_at: Optional[datetime] = None
