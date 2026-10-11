@@ -60,4 +60,7 @@ export const ACTION_LABELS = {
   'opening_hours.updated': 'Opening hours updated',
   'access.refused': 'Access refused',
   'role.changed': 'Role changed',
+  'member.applied': 'Membership applied for',
+  'booking.created': 'Tickets booked',
+  'booking.cancelled': 'Booking cancelled',
 };

@@ -11,6 +11,11 @@ import EventDetailPage from '../pages/visitor/EventDetailPage';
 import SignInPage from '../pages/SignInPage';
 import PlaceholderPage from '../pages/PlaceholderPage';
 import NotFoundPage from '../pages/NotFoundPage';
+import TicketBookingPage from '../pages/booking/TicketBookingPage';
+import CheckoutPage from '../pages/booking/CheckoutPage';
+import BookingConfirmationPage from '../pages/booking/BookingConfirmationPage';
+import MembershipPlansPage from '../pages/public/MembershipPlansPage';
+import MembershipStatusPage from '../pages/member/MembershipStatusPage';
 
 import StaffDashboard from '../pages/staff/StaffDashboard';
 import StaffEventsPage from '../pages/staff/StaffEventsPage';
@@ -51,12 +56,19 @@ export default function AppRoutes() {
         <Route path="events" element={<EventsPage />} />
         <Route path="events/:slug" element={<EventDetailPage />} />
 
-        <Route path="membership" element={<PlaceholderPage title="Membership" />} />
-        <Route path="book" element={<PlaceholderPage title="Book tickets" />} />
+        <Route path="membership" element={<MembershipPlansPage />} />
+
+        {/* Step 1 is public; steps 2-3 need an account. The contract gates
+            booking at "Member", which Staff and Admin inherit. */}
+        <Route path="book" element={<TicketBookingPage />} />
+        <Route element={<RoleGuard allow={['member', 'staff', 'admin']} />}>
+          <Route path="book/details" element={<CheckoutPage />} />
+          <Route path="book/confirmation/:reference" element={<BookingConfirmationPage />} />
+        </Route>
 
         {/* Members only — a staff account has no membership to show. */}
         <Route element={<RoleGuard allow={['member']} />}>
-          <Route path="account" element={<PlaceholderPage title="My membership" />} />
+          <Route path="account" element={<MembershipStatusPage />} />
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />

@@ -1,5 +1,59 @@
 # Decision log
 
+## 2026-10-11 — Booking and membership: front end built against mocks, contract amendment proposed
+
+**Status:** proposed — needs G2 sign-off (Ray/Harbor/Rock) before the
+backend endpoints are written.
+
+**Why.** The frozen contract books tickets per event
+(`POST /api/events/{id}/bookings`, Flow 5). The client's "ticket booking
+with simulated payment" requirement, the revised booking screens and Molly's
+`ticket_type` / `ticket_reservation` tables are all about **general admission
+on a date** (date, arrival time, ticket type, quantity). The front end
+follows the tables and the screens; Flow 5 stays as-is for event-specific
+bookings if we keep them.
+
+**What the front end now does (all on mocks, `VITE_USE_MOCKS=true`).**
+
+- `/book` → `/book/details` → `/book/confirmation/:reference` — three steps
+  as on the design board. Step 1 is public; steps 2–3 need an account
+  (contract role "Member", which Staff/Admin inherit). The choice is kept in
+  `sessionStorage` so it survives the trip through sign-in.
+- Payment is a clearly labelled simulated step with a required
+  acknowledgement. No card fields.
+- Arrival windows are two hours, generated from the opening-hours table;
+  60 places per window. Member tickets ($0) are only offered to an account
+  with an active membership, up to `adults_covered + children_covered`.
+- `/membership` lists Individual $65 / Family $120 / Patron $280 and creates
+  a **pending** application; an administrator approves it on
+  `/admin/members` (same mock data, so the chain works end to end).
+- `/account` shows the member's own membership and bookings.
+
+### Endpoints (contract amendment proposed)
+
+| Method | Path | Role | Notes |
+|---|---|---|---|
+| GET | `/api/ticket-types` | Public | `ticket_type` rows; price in integer cents; Member type only when the caller has an active membership, with `max_quantity` |
+| GET | `/api/bookings/availability?date=YYYY-MM-DD` | Public | `{ date, is_closed, opens_at, closes_at, note, windows: [{ start, end, places_left }] }` |
+| POST | `/api/bookings` | Member | body `{ visit_date, arrival_window: {start,end}, lines: [{ticket_type_id, quantity}], visitor: {first_name,last_name,email,mobile}, accessibility: [], payment_acknowledged: true }` → `201` booking with `reference`; `400 INSUFFICIENT_TICKETS`, `409 BOOKING_LIMIT_EXCEEDED` (more than 10 tickets) |
+| GET | `/api/bookings/me` | Member | `{ items, total, page, size }` |
+| GET | `/api/bookings/{reference}` | Member | own booking only (Staff: any); someone else's → `404`, not `403` |
+| POST | `/api/bookings/{reference}/cancel` | Member | only while `reserved`; `409` otherwise |
+| GET | `/api/memberships/me` | Member | caller's current record, or `404` |
+| POST | `/api/membership-applications` | Member | existing Flow 6 endpoint, plus optional `children_covered` |
+
+### Schema questions for Molly
+
+1. `ticket_reservation` stores one ticket type per row. A booking with
+   adults + children is several rows — either add a `booking_reference`
+   column to group them, or add a parent `booking` table.
+2. Arrival window: `visit_time` holds the window start; capacity per window
+   (60) is a constant for now — table or config?
+3. `membership` has no `adults_covered` / `children_covered`, which the
+   locked scope decision and the admin screen already use.
+4. No `membership_plan` table — plans are hard-coded on the front end for
+   now (`frontend/src/api/mocks/membershipPlans.js`).
+
 ## 2026-09-22 — Media failover: explicit `MEDIA_BACKEND` switch (local + R2 standbys)
 
 **Context.** Tutor asked for a total-backup story: what happens when
