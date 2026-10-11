@@ -82,6 +82,24 @@ docker compose exec -T db psql -U museum -d museum -c \
 rclone check <src> <dst>   # byte-level agreement, non-zero exit on drift
 ```
 
+### 4b. Installing the nightly jobs (one-time, cron host)
+
+Pick ONE always-on machine (propose: whoever owns DB ops — Molly — or a
+shared spot; record the choice in the drill log below). On that host, with
+an absolute repo path and rclone remotes configured:
+
+```bash
+crontab -e
+# Regional Museum Platform — nightly backup (Tier 1 + 1b)
+0 2 * * * cd /absolute/path/to/Regional-museum-platform && ./scripts/backup_database.sh
+5 2 * * * cd /absolute/path/to/Regional-museum-platform && ./scripts/mirror_media.sh && ./scripts/mirror_media.sh --dest r2
+```
+
+Check health with one command: `tail -5 backups/backup.log backups/mirror.log`
+— two consecutive green nights = the system is live. If the host laptop
+sleeps at 02:00, cron silently skips: prefer a machine that stays awake,
+or say so in the handover notes and accept best-effort scheduling.
+
 ## 5. Failover flip (Supabase down) and failback
 
 Flipping the env var alone only moves **new** uploads — existing rows
