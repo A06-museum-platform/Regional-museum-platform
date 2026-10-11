@@ -28,8 +28,15 @@ export default function SignInPage() {
     try {
       const user = await signIn(nextEmail, nextPassword);
       // Send them where they were originally headed, or to the landing page
-      // for their role.
-      navigate(location.state?.from || LANDING_BY_ROLE[user.role] || '/', { replace: true });
+      // for their role. A remembered staff/admin URL is only honoured for an
+      // account that can open it — otherwise signing out of the workspace and
+      // back in as a member lands that member on the refusal screen.
+      const from = location.state?.from;
+      const fromAllowed =
+        from &&
+        !(from.startsWith('/admin') && user.role !== 'admin') &&
+        !(from.startsWith('/staff') && user.role === 'member');
+      navigate((fromAllowed && from) || LANDING_BY_ROLE[user.role] || '/', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
