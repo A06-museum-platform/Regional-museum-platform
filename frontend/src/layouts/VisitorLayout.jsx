@@ -66,6 +66,11 @@ export default function VisitorLayout() {
                     <Button variant="ghost" size="sm">Workspace</Button>
                   </Link>
                 )}
+                {user.role === 'member' && (
+                  <Link to="/account">
+                    <Button variant="ghost" size="sm">My account</Button>
+                  </Link>
+                )}
                 <Link to="/book"><Button size="sm">Book tickets</Button></Link>
                 <Button
                   variant="ghost"
@@ -99,6 +104,8 @@ export default function VisitorLayout() {
           </div>
           <div>
             <Link to="/visit">Plan your visit</Link>
+            <br />
+            <Link to="/book">Book tickets</Link>
             <br />
             <Link to="/membership">Membership</Link>
           </div>

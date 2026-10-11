@@ -17,6 +17,16 @@ export const DEMO_USERS = [
     is_active: true,
   },
   {
+    // Signed-in visitor with no membership yet, so the apply-for-membership
+    // flow can be demonstrated end to end (apply here, approve as admin).
+    id: 'u-0004',
+    email: 'sam.taylor@example.com',
+    password: 'demo1234',
+    full_name: 'Sam Taylor',
+    role: 'member',
+    is_active: true,
+  },
+  {
     id: 'u-0002',
     email: 'xuan.meng@sarhn.example.com',
     password: 'demo1234',

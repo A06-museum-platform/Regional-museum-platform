@@ -1,0 +1,335 @@
+/* Shared by the three booking steps and their components. Follows the
+   "Book tickets — step 2/3" boards and the responsive reference frame. */
+
+/* --- step indicator --------------------------------------------------- */
+.steps {
+  display: flex;
+  border: 1px solid var(--c-border);
+  border-bottom: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--c-paper);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  flex: 1;
+  padding: var(--s-3) var(--s-5);
+  font-size: var(--fs-sm);
+  color: var(--c-muted);
+}
+
+.stepCurrent {
+  background: var(--c-white);
+  color: var(--c-ink);
+  font-weight: 600;
+  border-left: 1px solid var(--c-border);
+  border-right: 1px solid var(--c-border);
+}
+
+.step:first-child.stepCurrent { border-left: 0; }
+.step:last-child.stepCurrent { border-right: 0; }
+
+.stepsMobile { display: none; }
+
+/* --- panel that holds each step --------------------------------------- */
+.panel {
+  background: var(--c-white);
+  border: 1px solid var(--c-border);
+  border-radius: 0 0 var(--radius) var(--radius);
+  overflow: hidden;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+}
+
+.main { padding: var(--s-5) var(--s-5) var(--s-6); }
+
+.sectionTitle { font-size: 20px; margin-bottom: var(--s-1); }
+
+.sectionHint { color: var(--c-muted); font-size: var(--fs-sm); margin-bottom: var(--s-4); }
+
+.section + .section { margin-top: var(--s-6); }
+
+/* --- step 1: arrival windows ------------------------------------------ */
+.windows {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: var(--s-2);
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.window {
+  display: flex;
+  gap: var(--s-2);
+  align-items: flex-start;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: var(--s-3);
+  min-height: var(--tap-min);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  background: var(--c-white);
+}
+
+.window input { margin-top: 3px; accent-color: var(--c-moss); }
+
+.windowSelected {
+  border: 2px solid var(--c-moss);
+  background: var(--c-lime-soft);
+  padding: calc(var(--s-3) - 1px);
+}
+
+.windowFull { color: var(--c-muted); cursor: not-allowed; background: var(--c-paper); }
+
+.windowMeta { display: block; font-size: var(--fs-xs); color: var(--c-muted); font-weight: 400; }
+.windowLow { color: #7A5510; font-weight: 600; }
+
+.closed {
+  border: 1px dashed var(--c-border);
+  border-radius: var(--radius);
+  padding: var(--s-4);
+  color: var(--c-muted);
+  font-size: 14px;
+}
+
+.dateRow { display: flex; gap: var(--s-3); align-items: flex-end; flex-wrap: wrap; }
+.dateRow .field { margin-bottom: 0; min-width: 220px; }
+
+.quickDates { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+
+/* --- ticket selector -------------------------------------------------- */
+.tickets { display: flex; flex-direction: column; gap: var(--s-2); }
+
+.ticket {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: var(--s-3) var(--s-4);
+}
+
+.ticketName { font-weight: 600; font-size: 14px; }
+.ticketMeta { font-size: var(--fs-xs); color: var(--c-muted); }
+
+.stepper { display: flex; align-items: center; gap: var(--s-2); }
+
+.stepperBtn {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--c-border);
+  background: var(--c-white);
+  color: var(--c-ink);
+  border-radius: var(--radius);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.stepperBtnAdd { background: var(--c-moss); border-color: var(--c-moss); color: var(--c-white); }
+.stepperBtn:disabled { background: var(--c-paper); border-color: var(--c-border); color: var(--c-muted); cursor: not-allowed; }
+
+.stepperValue { width: 24px; text-align: center; font-weight: 700; }
+
+/* --- bottom bar: running total + continue ------------------------------ */
+.footerBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-4) var(--s-5);
+  border-top: 1px solid var(--c-border);
+  background: var(--c-white);
+}
+
+.totalLabel { font-size: var(--fs-xs); color: var(--c-muted); }
+.totalValue { font-family: var(--font-display); font-size: 22px; font-weight: 700; }
+
+/* --- dark summary panel ----------------------------------------------- */
+.summary {
+  background: var(--c-ink);
+  color: var(--c-paper);
+  padding: var(--s-5);
+}
+
+.summaryLabel { font-size: var(--fs-sm); color: #B8C2A8; margin-bottom: var(--s-3); }
+.summaryTitle { color: var(--c-lime); font-size: 18px; margin-bottom: var(--s-1); }
+.summarySub { font-size: var(--fs-sm); color: #B8C2A8; margin-bottom: var(--s-4); }
+.summaryBlock { border-top: 1px solid #3A4632; padding-top: var(--s-3); font-size: 14px; }
+.summaryRow { display: flex; justify-content: space-between; gap: var(--s-3); margin-bottom: var(--s-2); }
+.summaryMuted { color: #B8C2A8; }
+
+.summaryTotal {
+  border-top: 1px solid #3A4632;
+  margin-top: var(--s-4);
+  padding-top: var(--s-3);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 600;
+}
+
+.summaryTotal span:last-child {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--c-lime);
+}
+
+.summaryNote { margin-top: var(--s-3); font-size: var(--fs-xs); color: #9AA68C; }
+.summaryEdit { color: var(--c-lime); font-size: var(--fs-sm); }
+
+/* --- step 2: details -------------------------------------------------- */
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
+
+.checks { display: flex; gap: var(--s-2); flex-wrap: wrap; margin-top: var(--s-2); }
+
+.check {
+  flex: 1;
+  min-width: 150px;
+  min-height: var(--tap-min);
+  display: flex;
+  gap: var(--s-2);
+  align-items: center;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: var(--s-2) var(--s-3);
+  font-size: var(--fs-sm);
+  font-weight: 400 !important;
+  cursor: pointer;
+}
+
+.check input { accent-color: var(--c-moss); }
+
+.simulated {
+  margin-top: var(--s-5);
+  border: 2px dashed var(--c-ochre);
+  background: var(--c-ochre-soft);
+  border-radius: var(--radius);
+  padding: var(--s-5);
+}
+
+.simulatedHead { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-2); }
+.simulatedHead h3 { margin: 0; }
+.simulated p { font-size: 14px; margin-bottom: var(--s-3); }
+
+.ack { display: flex; gap: var(--s-2); align-items: flex-start; font-size: var(--fs-sm); margin-bottom: var(--s-4); cursor: pointer; }
+.ack input { margin-top: 3px; accent-color: var(--c-moss); }
+
+.errorBox {
+  background: var(--c-danger-soft);
+  border: 1px solid var(--c-danger);
+  border-radius: var(--radius);
+  padding: var(--s-3) var(--s-4);
+  color: var(--c-danger);
+  font-size: var(--fs-sm);
+  margin-bottom: var(--s-4);
+}
+
+/* --- step 3: confirmation ---------------------------------------------- */
+.confirmed {
+  background: var(--c-lime-soft);
+  border: 1px solid var(--c-lime);
+  border-radius: var(--radius);
+  padding: var(--s-4) var(--s-5);
+  margin-bottom: var(--s-5);
+}
+
+.confirmed h2 { font-size: 18px; margin-bottom: var(--s-1); }
+.confirmed p { margin: 0; font-size: 14px; }
+
+.cancelledBanner {
+  background: var(--c-danger-soft);
+  border: 1px solid #E0B6AE;
+  color: var(--c-danger);
+  border-radius: var(--radius);
+  padding: var(--s-4) var(--s-5);
+  margin-bottom: var(--s-5);
+}
+
+.cancelledBanner h2 { font-size: 18px; margin-bottom: var(--s-1); }
+.cancelledBanner p { margin: 0; font-size: 14px; color: var(--c-ink); }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); }
+
+.pass {
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: var(--s-5);
+  display: flex;
+  gap: var(--s-5);
+  align-items: center;
+}
+
+.qr {
+  flex: 0 0 auto;
+  width: 104px;
+  height: 104px;
+  background: var(--c-white);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: 6px;
+}
+
+.passTitle { font-size: 16px; margin-bottom: var(--s-1); }
+.passMeta { font-size: var(--fs-sm); color: var(--c-muted); line-height: 1.7; }
+.passRef { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.02em; }
+
+.actions { display: flex; gap: var(--s-2); flex-wrap: wrap; margin-top: var(--s-4); }
+
+.gettingThere { font-size: 14px; line-height: 1.8; color: var(--c-muted); }
+
+.lineTable { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: var(--s-4); }
+.lineTable td { padding: var(--s-2) 0; border-top: 1px solid var(--c-border); }
+.lineTable td:last-child { text-align: right; }
+.lineTable tr:last-child td { font-weight: 700; }
+
+/* --- the one breakpoint ------------------------------------------------ */
+@media (max-width: 768px) {
+  .steps { display: none; }
+  .stepsMobile {
+    display: block;
+    background: var(--c-white);
+    border: 1px solid var(--c-border);
+    border-bottom: 0;
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: var(--s-3) var(--s-4) 0;
+  }
+  .stepsMobileLabel { font-size: var(--fs-xs); color: var(--c-muted); margin-bottom: var(--s-1); }
+  .progress { height: 4px; background: var(--c-paper); border-radius: 3px; }
+  .progressFill { height: 4px; background: var(--c-moss); border-radius: 3px; }
+
+  .split, .grid2, .row2 { grid-template-columns: 1fr; }
+  .main { padding: var(--s-4); }
+  .summary { padding: var(--s-4); }
+
+  /* Running total and the primary action stay pinned while scrolling. */
+  .footerBar {
+    position: sticky;
+    bottom: 0;
+    padding: var(--s-3) var(--s-4);
+    box-shadow: 0 -6px 18px rgba(30, 42, 23, 0.08);
+  }
+
+  .pass { flex-direction: column; align-items: flex-start; }
+  .actions > * { flex: 1 1 100%; }
+}
+
+/* Printing the confirmation is how a visitor "downloads" the pass (Save as
+   PDF in the print dialog). Hide everything that is not the pass itself. */
+@media print {
+  .noPrint { display: none !important; }
+  .panel { border: 0; }
+}
+
+@media print {
+  :global(header), :global(footer) { display: none !important; }
+}
