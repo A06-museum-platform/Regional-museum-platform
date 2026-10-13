@@ -191,3 +191,25 @@ def test_settings_rejects_unknown_backend():
     with pytest.raises(ValidationError):
         Settings(media_backend="r22")
     assert Settings(media_backend="R2").media_backend == "r2"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("key,expected_bearer", [("sb_secret_test_only", None), ("legacy-test-only", "Bearer legacy-test-only")])
+async def test_supabase_upload_auth_works_for_new_and_legacy_keys(monkeypatch, key, expected_bearer):
+    import httpx
+    from app.services import storage
+    requests = []
+
+    def accept(request):
+        requests.append(request)
+        return httpx.Response(201)
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(accept))
+    monkeypatch.setattr(storage.httpx, "AsyncClient", lambda **kwargs: client)
+    url = await SupabaseStorage("https://example.invalid", key, "museum-media").upload(
+        "uploads/test.png", b"test-image", "image/png"
+    )
+    assert url.endswith("/museum-media/uploads/test.png")
+    assert requests[0].headers["apikey"] == key
+    assert requests[0].headers.get("authorization") == expected_bearer
+    assert requests[0].content == b"test-image"

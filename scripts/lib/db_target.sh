@@ -6,6 +6,8 @@
 # Usage in scripts:  source "$(dirname "$0")/lib/db_target.sh"
 
 _db_target_init() {
+  # Hosted Supabase currently uses PG17; its pg_dump client must be >=17.
+  DB_CLIENT_IMAGE="${DB_CLIENT_IMAGE:-postgres:17}"
   # Compose reads .env automatically; shell scripts do not. Read this one
   # setting as data, never source/evaluate the file. An explicit empty export
   # still forces local mode for offline recovery.

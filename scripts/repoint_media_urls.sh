@@ -7,6 +7,8 @@
 # Backends and their URL prefixes live in backend/app/services/storage.py
 # (public_url) — keep them in sync when that file changes.
 set -euo pipefail
+source "$(dirname "$0")/lib/db_target.sh"
+_db_target_init
 
 FROM="${1:?usage: repoint_media_urls.sh <supabase|r2|local> <supabase|r2|local>}"
 TO="${2:?usage: repoint_media_urls.sh <supabase|r2|local> <supabase|r2|local>}"
@@ -30,10 +32,15 @@ FROM_P="$(prefix_for "$FROM")"
 TO_P="$(prefix_for "$TO")"
 
 echo "Repointing media_asset.url: $FROM_P -> $TO_P"
-docker compose exec -T db psql -U museum -d museum -c \
-  "UPDATE media_asset SET url = regexp_replace(url, '^${FROM_P}', '${TO_P}') WHERE storage = '${FROM}';"
-docker compose exec -T db psql -U museum -d museum -c \
-  "UPDATE media_asset SET storage = '${TO}' WHERE storage = '${FROM}';"
-docker compose exec -T db psql -U museum -d museum -c \
+db_psql -v ON_ERROR_STOP=1 --single-transaction \
+  -v from_backend="$FROM" -v to_backend="$TO" \
+  -v from_prefix="$FROM_P" -v to_prefix="$TO_P" <<'SQL'
+UPDATE public.media_asset
+SET url = :'to_prefix' || substring(url FROM char_length(:'from_prefix') + 1),
+    storage = :'to_backend'
+WHERE storage = :'from_backend'
+  AND left(url, char_length(:'from_prefix')) = :'from_prefix';
+SQL
+db_psql -v ON_ERROR_STOP=1 -c \
   "SELECT storage, count(*) FROM media_asset GROUP BY 1;"
 echo "Repoint OK — set MEDIA_BACKEND=${TO} and recreate the backend container."

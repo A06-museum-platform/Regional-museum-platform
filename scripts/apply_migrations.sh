@@ -49,4 +49,9 @@ for f in database/migrations/0*.sql; do
   db_psql -c \
     "INSERT INTO schema_migrations (filename) VALUES ('$name');"
 done
+# ACL restoration does not purge grants inherited from target defaults.
+# Re-enforce this explicitly idempotent, permission-only policy even when
+# its tracker entry was restored. Do not replay schema/data migrations.
+db_psql -v ON_ERROR_STOP=1 -f - < database/migrations/006_backend_default_privileges.sql
+echo "Backend-only database access enforced"
 echo "Migrations OK"

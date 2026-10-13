@@ -8,7 +8,12 @@ set -euo pipefail
 # mirror_media.sh --from volume writes under <mirror>/volume/ (the key
 # layout starts below it), so restore from that subdir — copying the whole
 # mirror dir would nest an extra `volume/` path and restored URLs 404.
-SRC_DIR="${MIRROR_DIR:-./backups/media}/volume"
+SOURCE="${1:-volume}"
+case "$SOURCE" in
+  volume|supabase) ;;
+  *) echo "usage: restore_media.sh [volume|supabase]" >&2; exit 1 ;;
+esac
+SRC_DIR="${MIRROR_DIR:-./backups/media}/$SOURCE"
 test -d "$SRC_DIR" || { echo "mirror volume dir not found: $SRC_DIR (run mirror_media.sh --from volume first)"; exit 1; }
 
 docker compose up -d backend > /dev/null

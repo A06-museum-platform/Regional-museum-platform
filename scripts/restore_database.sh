@@ -25,20 +25,20 @@ if db_is_remote; then
   # --clean drops objects first (equivalent to drop/recreate, which hosted
   # plans forbid on the live database).
   echo "Restoring $DUMP ..."
-  docker run --rm -v "$DUMP_ABS:/tmp/restore.dump:ro" postgres:16 \
-    pg_restore -d "$DATABASE_URL_STAGING" --schema=public --no-owner --no-acl \
+  docker run --rm -v "$DUMP_ABS:/tmp/restore.dump:ro" "$DB_CLIENT_IMAGE" \
+    pg_restore -d "$DATABASE_URL_STAGING" --schema=public --no-owner \
       --clean --if-exists --exit-on-error --single-transaction /tmp/restore.dump
 else
   echo "Dropping and recreating database 'museum'..."
   docker compose exec -T db psql -U museum -d postgres -c \
     "DROP DATABASE museum;" -c "CREATE DATABASE museum;"
-  # pg_restore needs a real file (custom-format archives are not streamable
-  # over stdin), so copy the dump into the db container first.
+  # Decode with PG17 so hosted custom archives can be restored to local PG16.
+  # Stream SQL, removing only PG17's unsupported session timeout setting.
   echo "Restoring $DUMP ..."
-  docker compose cp "$DUMP_ABS" db:/tmp/restore.dump
-  docker compose exec -T db pg_restore -U museum -d museum --no-owner --no-acl \
-    --exit-on-error --single-transaction /tmp/restore.dump
-  docker compose exec -T db rm /tmp/restore.dump
+  docker run --rm -v "$DUMP_ABS:/tmp/restore.dump:ro" "$DB_CLIENT_IMAGE" \
+    pg_restore --no-owner --no-acl --file=- /tmp/restore.dump | \
+    sed -e '/^SET transaction_timeout = 0;$/d' -e '/^CREATE SCHEMA public;$/d' | \
+    db_psql -v ON_ERROR_STOP=1 --single-transaction -f -
 fi
 
 # An older snapshot can predate the current code (e.g. no media_asset.storage
