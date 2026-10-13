@@ -1,0 +1,42 @@
+# Free API only. Supabase is the database; never create expiring Render PG.
+# Apply from the reviewed branch, then provide private values in Render UI.
+services:
+  - type: web
+    name: regional-museum-platform-api
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: backend
+    autoDeployTrigger: off
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FRONTEND_ORIGIN
+        value: https://regional-museum-platform.pages.dev
+      - key: MEDIA_BACKEND
+        value: supabase
+      - key: LOCAL_UPLOAD_DIR
+        value: /tmp/museum-uploads
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        value: museum-media
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_ACCESS_KEY
+        sync: false
+      - key: R2_SECRET_KEY
+        sync: false
+      - key: R2_BUCKET
+        value: museum-media
+      - key: R2_PUBLIC_BASE
+        sync: false

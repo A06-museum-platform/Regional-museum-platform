@@ -39,7 +39,7 @@ code, migrations and runbooks must trace back to a section here.
 Three boxes, two links. Files (bytes) and facts (URLs) travel separately
 and meet only at upload time.
 
-- **PostgreSQL (docker)** holds facts: `media_asset` rows (owner, URL,
+- **PostgreSQL (Docker by default, Supabase for staging)** holds facts: `media_asset` rows (owner, URL,
   type, order, primary, storage backend). No binaries, ever.
 - **Supabase Storage (primary)** holds bytes: bucket `museum-media`,
   public read, writes via `service_role` from backend only.
@@ -142,6 +142,10 @@ owner-agnostic and survives either shape unchanged.
 
 ## 7. Configuration
 
+Database staging uses DATABASE_URL_STAGING (IPv4 session pooler, TLS);
+Compose passes it as DATABASE_URL, while an explicit empty override selects
+Docker for offline recovery. Hosted rows remain live without the member Mac.
+
 `.env` (gitignored, ≤2 holders for secrets): `SUPABASE_URL`,
 `SUPABASE_SERVICE_KEY`, `SUPABASE_BUCKET`, `R2_*` (P3), `MEDIA_BACKEND`
 (default `local`), `MAX_IMAGE_MB`, `MAX_VIDEO_MB`. Placeholders in
@@ -166,7 +170,10 @@ Operational detail: `docs/runbooks/media-ops.md`.
 Bucket public-read, anon write denied; all writes via backend-held
 `service_role`. Filenames uuid-renamed (no user input in paths);
 extension↔content-type match enforced; keys env-only with rotation
-procedure. R2 tokens scoped to one bucket when built.
+procedure. The backend accepts a fresh sb_secret key (service_role
+privileges) through apikey without treating it as a JWT. R2 tokens are scoped
+to museum-media. Browser database roles have no application-table access;
+the recovery permission policy re-enforces this before API restart.
 
 ## 10. Open decisions
 

@@ -115,8 +115,10 @@ class SupabaseStorage:
         self.bucket = bucket
         self._headers = {
             "apikey": service_key,
-            "Authorization": f"Bearer {service_key}",
         }
+        # New secret keys resolve to service_role via apikey and aren't JWTs.
+        if not service_key.startswith("sb_secret_"):
+            self._headers["Authorization"] = f"Bearer {service_key}"
 
     def public_url(self, key: str) -> str:
         return f"{self.url}/storage/v1/object/public/{self.bucket}/{key}"
