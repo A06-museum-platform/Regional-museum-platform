@@ -297,7 +297,9 @@ acceptance remain open. Keep secrets with no more than two holders.
 
 ## 10. Verified cloud drills and deployment gaps (2026-10-13)
 
-- Hosted PG17.6: empty-public-schema import PASS; 4 users and 12 original
+- Hosted PG17.6: psql client-to-session-pooler TLSv1.3 verified with
+  \conninfo (pg_stat_ssl reports the separate internal pooled connection).
+  Empty-public-schema import PASS; 4 users and 12 original
   media rows; 001–006 tracker replay PASS; real API login 200 and Supabase
   upload 201 with byte-equal public read 200. New backend-only secret key is
   saved in .env and maps to service_role; legacy JWT keys were not revoked.
@@ -354,6 +356,9 @@ membership APIs remain team integration work. Do not switch all frontend
 requests to real mode before those routes are implemented. Once Render is
 connected, rebuild Pages with VITE_API_BASE_URL=<Render URL>/api and record
 exact integration coverage; no API credentials belong in frontend builds.
+
+GitHub PR CI checks were not reported for this branch at handoff; local
+pytest/build/drill evidence is verified, but no remote CI pass is claimed.
 
 Open handover items: organization manager approves Render and configures
 GitHub backup secrets/zero spending cap; first hosted API deployment and
