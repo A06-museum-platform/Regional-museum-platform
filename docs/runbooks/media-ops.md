@@ -382,11 +382,13 @@ URLs never redirect. This changes browser reads, not DB rows or upload mode.
 The reusable component is used in the real staff Media library; unfinished
 business pages still need their normal API/image integration.
 
-Cloud sync setup (repository administrator): Settings → Secrets and variables
+Cloud sync setup (repository administrator): first merge PR #16 so the
+R2 outage safeguards reach default dev. Then Settings → Secrets and variables
 → Actions: privately add DATABASE_URL_STAGING and MUSEUM_RCLONE_CONFIG
 (the full ignored rclone.conf content with both remotes). Set Actions variable
 MUSEUM_BACKUP_ENABLED=true; confirm zero paid overage budget. The workflow
-already exists on default dev after PR #15 merged. Run Nightly recovery
+already exists on default dev after PR #15 merged; its latest safeguards
+are in PR #16. Run Nightly recovery
 backup manually, inspect success and its private artifact, then verify two
 scheduled nights. It runs independently of Render and any member laptop.
 This is daily replication, not instantaneous dual writing; newly uploaded
