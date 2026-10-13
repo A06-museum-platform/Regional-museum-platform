@@ -1,0 +1,55 @@
+name: Nightly recovery backup
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 2 * * *'
+      timezone: Australia/Adelaide
+
+permissions:
+  contents: read
+
+concurrency:
+  group: museum-recovery-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    # Repository admin enables this after setting secrets and a zero spending cap.
+    if: vars.MUSEUM_BACKUP_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DATABASE_URL_STAGING: ${{ secrets.DATABASE_URL_STAGING }}
+      MUSEUM_RCLONE_CONFIG: ${{ secrets.MUSEUM_RCLONE_CONFIG }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate and write private mirror configuration
+        run: |
+          test -n "$DATABASE_URL_STAGING"
+          test -n "$MUSEUM_RCLONE_CONFIG"
+          umask 077
+          printf '%s' "$MUSEUM_RCLONE_CONFIG" > rclone.conf
+      - name: Back up database and verify both media mirrors
+        run: |
+          ./scripts/backup_database.sh
+          ./scripts/nightly_media.sh
+      - name: Package recovery data within free storage budget
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import tarfile
+          with tarfile.open('museum-recovery.tgz', 'w:gz') as archive:
+              archive.add('backups', arcname='backups')
+          if Path('museum-recovery.tgz').stat().st_size > 10 * 1024 * 1024:
+              raise SystemExit('Backup exceeds 10 MiB artifact budget; review storage before enabling uploads')
+          PY
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: museum-recovery-${{ github.run_id }}
+          path: museum-recovery.tgz
+          retention-days: 7
+          if-no-files-found: error
+      - name: Remove private runner configuration
+        if: always()
+        run: rm -f rclone.conf museum-recovery.tgz

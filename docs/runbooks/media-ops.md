@@ -82,23 +82,21 @@ docker compose exec -T db psql -U museum -d museum -c \
 rclone check <src> <dst>   # byte-level agreement, non-zero exit on drift
 ```
 
-### 4b. Installing the nightly jobs (one-time, cron host)
+### 4b. Cloud nightly jobs (independent of the member Mac)
 
-Pick ONE always-on machine (propose: whoever owns DB ops — Molly — or a
-shared spot; record the choice in the drill log below). On that host, with
-an absolute repo path and rclone remotes configured:
+Use `.github/workflows/recovery-backup.yml` on dev, the repository default
+branch. A repository administrator must set the encrypted secrets
+DATABASE_URL_STAGING and MUSEUM_RCLONE_CONFIG and the repository variable
+MUSEUM_BACKUP_ENABLED=true, after confirming free allowance/spending controls.
+The workflow is prepared but not active; the current account has push access
+and cannot configure repository secrets. No Mac crontab is installed.
 
-```bash
-crontab -e
-# Regional Museum Platform — nightly backup (Tier 1 + 1b)
-0 2 * * * cd /absolute/path/to/Regional-museum-platform && ./scripts/backup_database.sh
-5 2 * * * cd /absolute/path/to/Regional-museum-platform && ./scripts/mirror_media.sh && ./scripts/mirror_media.sh --dest r2
-```
-
-Check health with one command: `tail -5 backups/backup.log backups/mirror.log`
-— two consecutive green nights = the system is live. If the host laptop
-sleeps at 02:00, cron silently skips: prefer a machine that stays awake,
-or say so in the handover notes and accept best-effort scheduling.
+The cloud runner dumps PostgreSQL, mirrors Supabase to R2 and a local runner
+folder, checks byte agreement, and publishes a private seven-day recovery
+artifact. Download the artifact to any member machine before an offline demo.
+Run the workflow manually once after activation, then check two scheduled
+nights; timing and free-budget controls are detailed in §9. Manual recovery
+commands remain available even if Actions is unavailable.
 
 ## 5. Failover flip (Supabase down) and failback
 
@@ -203,7 +201,7 @@ Initial import is for an **empty public schema only**:
 
 ```bash
 ./scripts/import_database.sh database/regional_museum_1010.sql
-./scripts/apply_migrations.sh   # all three versions must skip
+./scripts/apply_migrations.sh   # all migration versions must skip
 ```
 
 The importer uses psql for plain SQL in one transaction, filters the exact
@@ -213,9 +211,14 @@ baselining recognises 003 only when its column, constraint and index exist.
 If public already has tables, stop and inventory them; this is not a license
 to overwrite an existing hosted project.
 
-Hosted backups contain **only public**, with ownership/ACL commands omitted.
+Hosted backups contain **only public**, with ownership commands omitted.
+Keep ACLs for hosted restore so browser-role revocations survive recovery;
+the offline decoder strips ACLs because Docker has no Supabase roles.
 They are application backups, not backups of Supabase Auth, Storage metadata
-or other managed schemas. Hosted restore filters to public, runs atomically
+or other managed schemas. Hosted PG17.6 was verified on 2026-10-13; backups use a PG17 client.
+Offline custom-archive restore decodes with PG17, filters its unsupported
+transaction timeout and redundant public-schema creation, then restores to
+Docker PG16 in one psql transaction. Hosted restore filters to public, runs atomically
 and exits on the first error. Stop any external API deployments before
 restore; the script stops/restarts the local Compose API, and terminates
 remaining database sessions. It cannot prevent external writers reconnecting.
@@ -226,7 +229,7 @@ Explicit offline switch (new shell invocation):
 
 ```bash
 DATABASE_URL_STAGING='' ./scripts/apply_migrations.sh
-DATABASE_URL_STAGING='' docker compose up -d --force-recreate backend
+DATABASE_URL_STAGING='' MEDIA_BACKEND=local docker compose up -d --force-recreate backend
 ```
 
 Use the same empty override for offline backup/restore. Docker and hosted
@@ -242,10 +245,13 @@ not PITR. See [pausing](https://supabase.com/docs/guides/platform/free-project-p
 [connections](https://supabase.com/docs/guides/database/connecting-to-postgres)
 and [backups](https://supabase.com/docs/guides/platform/backups).
 
-Snapshot caveat: the October dump has 12 Supabase public media URLs stamped
-`storage=remote`. They will not be touched by the current repoint command.
-Confirm which objects this project owns, then correct classifications in a
-new append-only migration before rehearsing failover of those images.
+Snapshot correction: migration 004 labels the 12 existing URLs in this
+project/bucket as supabase. Migration 005 removes anonymous/authenticated
+Data API access to application tables and sets restrictive future grants.
+Migration 006 also removes global creator defaults. The explicitly
+idempotent permission policy is enforced after migration replay/restores,
+because target-default grants can survive an archive ACL restore. All three
+were verified on hosted PG17 and keyless Docker PG16.
 
 ## 9. Deployment and account closeout
 
@@ -255,20 +261,104 @@ includes free monthly usage but charges usage above the allowance. The user
 reports an existing R2 account; plan, bucket scope and credentials are still
 unverified. No paid service or card-required signup has been performed.
 
-Hosting remains a decision: prefer one Always Free VM for the Compose stack
-if the owner accepts the signup requirements and capacity is available.
+Hosting decision (2026-10-13, user): Render Free API + Cloudflare Pages
+frontend, Supabase PG/Storage primary and R2 object standby. Docker Compose
+remains the offline fallback. Oracle is not being provisioned.
 [Oracle's FAQ](https://www.oracle.com/cloud/free/faq/) requires a card for
 identity verification, so creating an account requires explicit approval.
-Render with Supabase remains the fallback candidate, subject to current
-free-plan limits. Neither deployment has been provisioned or tested.
+Pages is deployed at https://regional-museum-platform.pages.dev/ from a
+compiled direct upload. Render is blocked on the existing organization-level
+GitHub app installation request. The current account is an organization
+member with repository push access, not an administrator.
 
-Scheduling decision for the current undeployed state: backups/mirrors run
-manually from Rock's member machine before demos and after important edits.
-Nightly cron is deliberately not installed on a sleeping laptop. Once an
-always-on host is chosen, move jobs to that host and require two successful
-nightly runs before treating nightly RPO as achieved.
+Scheduling decision (user requires independence from their Mac): cloud GitHub
+Actions, not local cron. No recurring Mac jobs were installed. The workflow
+runs at 02:17 Australia/Adelaide (DST-aware), first dumping the database then
+mirroring/checking media, and retaining a private recovery artifact for seven
+days. It is disabled by default until an administrator sets the two encrypted
+repository secrets `DATABASE_URL_STAGING` and `MUSEUM_RCLONE_CONFIG` (the latter
+is the private rclone.conf content), sets `MUSEUM_BACKUP_ENABLED=true`, and
+confirms a zero Actions spending cap. Never send either value through chat.
+Merge the workflow to dev (the default branch), run it manually once, then
+require two green scheduled nights before claiming nightly RPO.
+
+[GitHub scheduling](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)
+can be delayed; failures must be reviewed. The five-minute job timeout bounds
+this workflow to about 155 minutes/month; its 10 MiB artifact guard and seven-day retention bound its stored artifacts to about 70 MiB. Other organization
+workloads share the allowance. The [Free allowance](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
+is 2,000 minutes and 500 MB, so an administrator must review shared usage and
+disable paid overages. Activation remains pending; manual commands are verified.
 
 Account inventory: Safari identifies Museum Platform Project in RockENZO's
 Org; confirmed ownership, second secret holder and M7 successor remain to be
 recorded. R2 owner/successor, hosting owner, key rotation status, and handover
 acceptance remain open. Keep secrets with no more than two holders.
+
+
+## 10. Verified cloud drills and deployment gaps (2026-10-13)
+
+- Hosted PG17.6: empty-public-schema import PASS; 4 users and 12 original
+  media rows; 001–006 tracker replay PASS; real API login 200 and Supabase
+  upload 201 with byte-equal public read 200. New backend-only secret key is
+  saved in .env and maps to service_role; legacy JWT keys were not revoked.
+- Bucket museum-media is public-read. There are no storage.objects write
+  policies; a publishable-key write was denied (HTTP 400 wrapper, storage
+  status 403 / RLS violation). Anonymous account-table SELECT/INSERT changed
+  from true to false after 005; staff login remained 200.
+- Supabase S3 mirror -> R2: PASS, rclone check --download exit 0.
+  Final post-cleanup agreement: 13 matching objects, zero differences.
+  Local Supabase mirror also has 13 matching objects, about 2.15 MB total.
+- Actual staging media flip Supabase -> local -> Supabase: PASS; 13 old
+  image reads returned 200; local upload 201 and byte-equal read; failback
+  retained that upload. Supabase -> R2 -> Supabase: PASS; 15 old image reads
+  returned 200; R2 upload 201 and byte-equal read; final failback read all
+  16 original/drill images successfully. Temporary uploads 14–17 were then
+  deleted through the API, leaving the original 12 rows on Supabase.
+- R2 token is Object Read & Write scoped only to museum-media; its public
+  development URL is enabled. It is rate-limited and is a prototype standby,
+  not a production SLA. Normal browser user-agent reads returned 200; plain
+  Python urllib's default user-agent returned 403 during verification.
+- Real hosted PG17 custom dump -> disposable Docker PG16 restore: PASS,
+  including a clean dump with ACLs (offline restore strips managed-role ACLs).
+  Hosted restore against a disposable PG17 target with pre-existing browser
+  defaults also PASS after policy enforcement: anon SELECT=false,
+  authenticated INSERT=false, unrelated managed_guard row retained.
+  Older-schema restore applies pending migrations before restarting the API.
+- Actual disposable uploads-volume deletion: old image 404; restored mirror
+  produced 200 with bytes matching. All 13 copied DB images served locally.
+  No existing project data volume was deleted.
+- Backend suite: 35 passed. Configured frontend origin and localhost passed
+  CORS preflight; unrelated origin was rejected. Frontend build and Pages
+  homepage/SPA route/assets HTTP checks passed.
+
+Mirrors keep distinct folders: backups/media/supabase for the cloud copy,
+backups/media/volume for local-mode files. This prevents rclone sync of the
+cloud copy from deleting the local-volume backup. Offline recovery can use
+`./scripts/restore_media.sh supabase` without cloud access; the default
+`./scripts/restore_media.sh` uses the volume snapshot. Installed rclone is
+optional: the verified official container v1.75.2 is pinned by digest and
+reads only the ignored repository rclone.conf. Keep that file mode 0600.
+
+Render setup is recorded in render.yaml: Free Python service, backend root,
+private DATABASE_URL copied from the staging URL, generated signing secret,
+MEDIA_BACKEND=supabase, /health check and FRONTEND_ORIGIN set to the Pages URL.
+LOCAL_UPLOAD_DIR is /tmp/museum-uploads so application boot does not require
+writing /app on Render. Set private Supabase/R2 values in Render's environment.
+No Render database, disk, paid plan or payment method is required. Its
+[Free service](https://render.com/docs/free) sleeps after 15 idle minutes and
+wakes on request; warm /health, then test login/media before the demo.
+
+The deployed frontend currently uses existing mock business data. The API
+implements auth, staff media and user administration; collection/event/
+membership APIs remain team integration work. Do not switch all frontend
+requests to real mode before those routes are implemented. Once Render is
+connected, rebuild Pages with VITE_API_BASE_URL=<Render URL>/api and record
+exact integration coverage; no API credentials belong in frontend builds.
+
+Open handover items: organization manager approves Render and configures
+GitHub backup secrets/zero spending cap; first hosted API deployment and
+scheduled backup run; two green scheduled nights; frontend business API
+integration; named second secret holder and M7 successor/transfer acceptance.
+Current cloud access is held by Rock: Supabase organization RockENZO's Org,
+Cloudflare's signed-in account (existing R2 subscription), and Render My
+Workspace. Account-owner identity/transfer must be confirmed at handover.
