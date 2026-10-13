@@ -5,9 +5,10 @@
  *   <MediaUploader ownerType="collection-item" ownerId={item.id}
  *                  onUploaded={(media) => ...} />
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { deleteMedia, listMedia, resolveMediaUrl, uploadMedia } from '../api/media.js';
 import styles from './MediaUploader.module.css';
+import MediaImage from './MediaImage.jsx';
 
 export default function MediaUploader({ ownerType, ownerId, onUploaded }) {
   const inputRef = useRef(null);
@@ -18,12 +19,20 @@ export default function MediaUploader({ ownerType, ownerId, onUploaded }) {
   async function refresh() {
     try {
       setItems(await listMedia(ownerType, ownerId));
-    } catch {
-      setItems([]);
+    } catch (err) {
+      setError(err.message || 'Could not load media.');
     }
   }
 
-  if (items === null) void refresh();
+  useEffect(() => {
+    let active = true;
+    listMedia(ownerType, ownerId).then((media) => {
+      if (active) setItems(media);
+    }).catch((err) => {
+      if (active) { setItems([]); setError(err.message || 'Could not load media.'); }
+    });
+    return () => { active = false; };
+  }, [ownerType, ownerId]);
 
   async function handleFiles(event) {
     const files = [...event.target.files];
@@ -64,7 +73,7 @@ export default function MediaUploader({ ownerType, ownerId, onUploaded }) {
       <div className={styles.row}>
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || items === null}
           onClick={() => inputRef.current?.click()}
         >
           {busy ? 'Uploading…' : 'Upload images'}
@@ -85,7 +94,7 @@ export default function MediaUploader({ ownerType, ownerId, onUploaded }) {
             {item.media_type === 'video' ? (
               <video src={resolveMediaUrl(item.url)} muted playsInline />
             ) : (
-              <img src={resolveMediaUrl(item.url)} alt="" loading="lazy" />
+              <MediaImage src={item.url} alt="" loading="lazy" />
             )}
             <figcaption>
               {item.is_primary && <span>Primary</span>}

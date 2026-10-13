@@ -13,9 +13,13 @@ import { DEMO_USERS } from './mocks/users';
  */
 
 const MOCK_TOKEN_PREFIX = 'mock.';
+export const USE_AUTH_MOCKS = import.meta.env.VITE_AUTH_USE_MOCKS === undefined
+  ? USE_MOCKS : import.meta.env.VITE_AUTH_USE_MOCKS === 'true';
+
+const normaliseUser = (user) => ({ ...user, full_name: user.full_name || user.display_name });
 
 export async function login(email, password) {
-  if (USE_MOCKS) {
+  if (USE_AUTH_MOCKS) {
     await delay();
     const user = DEMO_USERS.find(
       (candidate) => candidate.email.toLowerCase() === email.trim().toLowerCase()
@@ -40,21 +44,22 @@ export async function login(email, password) {
       });
     }
 
-    const { password: _ignored, ...safeUser } = user;
+    const safeUser = { ...user };
+    delete safeUser.password;
     setToken(`${MOCK_TOKEN_PREFIX}${user.id}`);
     return { access_token: `${MOCK_TOKEN_PREFIX}${user.id}`, user: safeUser };
   }
 
   const result = await request('/auth/login', { method: 'POST', body: { email, password } });
   setToken(result.access_token);
-  return result;
+  return { ...result, user: normaliseUser(result.user) };
 }
 
 export async function me() {
   const token = getToken();
   if (!token) return null;
 
-  if (USE_MOCKS) {
+  if (USE_AUTH_MOCKS) {
     await delay(0);
     if (!token.startsWith(MOCK_TOKEN_PREFIX)) return null;
     const id = token.slice(MOCK_TOKEN_PREFIX.length);
@@ -63,12 +68,13 @@ export async function me() {
       clearToken();
       return null;
     }
-    const { password: _ignored, ...safeUser } = user;
+    const safeUser = { ...user };
+    delete safeUser.password;
     return safeUser;
   }
 
   try {
-    return await request('/auth/me');
+    return normaliseUser(await request('/auth/me'));
   } catch (error) {
     if (error.isUnauthenticated) {
       clearToken();
