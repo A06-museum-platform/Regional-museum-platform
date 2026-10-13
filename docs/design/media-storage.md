@@ -59,7 +59,8 @@ and meet only at upload time.
 **F3 — Cloud scheduled recovery:** GitHub Actions at 02:17 Adelaide time
 runs pg_dump, then rclone sync Supabase to R2 and a runner folder, verifies
 bytes, and saves a private seven-day artifact. Activation requires repository
-admin secrets and MUSEUM_BACKUP_ENABLED=true; no member Mac is involved.
+repository secrets, verified spending controls and MUSEUM_BACKUP_ENABLED=true;
+no member Mac is involved.
 Rclone uses the Supabase S3-compatible endpoint. While R2-backed rows exist,
 the job backs up R2 instead and refuses Supabase-to-R2 sync.
 

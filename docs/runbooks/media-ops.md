@@ -69,7 +69,7 @@ then re-run the mirror (§5). Direct drops without backfill rows are the
 ## 4. Keeping failover copies in agreement
 
 Manual commands below; the selected cloud schedule runs sequentially at
-02:17 Adelaide time after administrator activation (§4b):
+02:17 Adelaide time after spending controls and activation (§4b):
 ```bash
 ./scripts/backup_database.sh              # pg_dump -Fc → backups/, 7-day rotation
 ./scripts/mirror_media.sh                 # Supabase -> local mirror dir
@@ -86,11 +86,13 @@ rclone check <src> <dst>   # byte-level agreement, non-zero exit on drift
 ### 4b. Cloud nightly jobs (independent of the member Mac)
 
 Use `.github/workflows/recovery-backup.yml` on dev, the repository default
-branch. A repository administrator must set the encrypted secrets
-DATABASE_URL_STAGING and MUSEUM_RCLONE_CONFIG and the repository variable
-MUSEUM_BACKUP_ENABLED=true, after confirming free allowance/spending controls.
-The workflow is prepared but not active; the current account has push access
-and cannot configure repository secrets. No Mac crontab is installed.
+branch. Repository write access can configure repository-level Secrets and
+variables; administrator access is required for environment-level Secrets.
+DATABASE_URL_STAGING and MUSEUM_RCLONE_CONFIG were saved through the signed-in
+GitHub browser and both names verified on 2026-10-13. The workflow remains
+disabled until an organization billing owner confirms zero paid overages and
+shared free allowance, then MUSEUM_BACKUP_ENABLED is set to true. The current
+account cannot access organization billing controls. No Mac crontab is installed.
 
 The cloud runner dumps PostgreSQL, mirrors Supabase to R2 and a local runner
 folder, checks byte agreement, and publishes a private seven-day recovery
@@ -277,10 +279,11 @@ Scheduling decision (user requires independence from their Mac): cloud GitHub
 Actions, not local cron. No recurring Mac jobs were installed. The workflow
 runs at 02:17 Australia/Adelaide (DST-aware), first dumping the database then
 mirroring/checking media, and retaining a private recovery artifact for seven
-days. It is disabled by default until an administrator sets the two encrypted
-repository secrets `DATABASE_URL_STAGING` and `MUSEUM_RCLONE_CONFIG` (the latter
-is the private rclone.conf content), sets `MUSEUM_BACKUP_ENABLED=true`, and
-confirms a zero Actions spending cap. Never send either value through chat.
+days. Both encrypted repository secrets DATABASE_URL_STAGING and
+MUSEUM_RCLONE_CONFIG (the private rclone.conf content) were configured through
+the browser on 2026-10-13. It remains disabled until the organization billing
+owner confirms zero paid overages, then MUSEUM_BACKUP_ENABLED can be set to
+true. Never send either secret value through chat.
 Merge the workflow to dev (the default branch), run it manually once, then
 require two green scheduled nights before claiming nightly RPO.
 
@@ -363,8 +366,8 @@ No API credentials belong in frontend builds.
 GitHub PR CI checks were not reported for this branch at handoff; local
 pytest/build/drill evidence is verified, but no remote CI pass is claimed.
 
-Open handover items: organization manager configures GitHub backup
-secrets/zero spending cap; first scheduled backup run; two green scheduled nights; frontend business API
+Open handover items: organization billing owner confirms zero paid
+overages and shared quota; enable the cloud backup variable; first scheduled backup run; two green scheduled nights; frontend business API
 integration; named second secret holder and M7 successor/transfer acceptance.
 Current cloud access is held by Rock: Supabase organization RockENZO's Org,
 Cloudflare's signed-in account (existing R2 subscription), and Render My
@@ -382,13 +385,12 @@ URLs never redirect. This changes browser reads, not DB rows or upload mode.
 The reusable component is used in the real staff Media library; unfinished
 business pages still need their normal API/image integration.
 
-Cloud sync setup (repository administrator): first merge PR #16 so the
-R2 outage safeguards reach default dev. Then Settings → Secrets and variables
-→ Actions: privately add DATABASE_URL_STAGING and MUSEUM_RCLONE_CONFIG
-(the full ignored rclone.conf content with both remotes). Set Actions variable
-MUSEUM_BACKUP_ENABLED=true; confirm zero paid overage budget. The workflow
-already exists on default dev after PR #15 merged; its latest safeguards
-are in PR #16. Run Nightly recovery
+Cloud sync setup: PR #16 is merged, so R2 outage safeguards are on default
+dev. Both repository Secrets have been configured and verified by name at
+Settings → Secrets and variables → Actions. Only repository write access was
+needed. After the organization billing owner confirms zero paid overages
+and available shared quota, set Actions variable MUSEUM_BACKUP_ENABLED=true.
+Run Nightly recovery
 backup manually, inspect success and its private artifact, then verify two
 scheduled nights. It runs independently of Render and any member laptop.
 This is daily replication, not instantaneous dual writing; newly uploaded
@@ -426,7 +428,7 @@ public read HTTP 200, cleanup HTTP 204. Backend 35 tests pass. Frontend build,
 scoped ESLint and three URL-mapping tests pass. Stubbed cloud-command drills:
 R2 overwrite refused; DB failure prevents sync; normal mirror path passes;
 R2 outage path backs up R2 and does not touch Supabase. Cloud automatic
-schedule remains pending administrator activation.
+schedule remains pending billing confirmation and activation.
 
 
 Live Pages browser verification (2026-10-13): production bundle
@@ -439,3 +441,16 @@ image. A second CSP blocked both hosts: Image unavailable appeared and no
 image retry remained. Reload removes these browser-only policies. Hosted
 rows, active writer and stored image objects were unchanged. This verifies
 browser image-access failure handling, not an actual provider outage.
+
+
+Actions Secrets browser setup (2026-10-13): DATABASE_URL_STAGING and
+MUSEUM_RCLONE_CONFIG saved successfully; GitHub confirmed Repository secret
+added for each and displayed both names. Credentials were read from ignored
+local configuration and never printed. PR #16 is merged. Repository Secrets
+are available with write access; the earlier admin-only statement was wrong.
+The organization's billing budgets page/API was unavailable to this account,
+so no paid overages setting is claimed and recurring execution stays disabled.
+GitHub Free includes 2,000 standard runner minutes and 500 MB artifact storage,
+shared with other organization workloads. Secret storage has no separate fee.
+See [Secrets permissions](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets)
+and [Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions).

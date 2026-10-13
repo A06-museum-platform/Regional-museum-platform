@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   backup:
-    # Repository admin enables this after setting secrets and a zero spending cap.
+    # Enable after repository secrets and organization zero-overage controls are verified.
     if: vars.MUSEUM_BACKUP_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
