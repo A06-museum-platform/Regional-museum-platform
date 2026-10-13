@@ -36,8 +36,21 @@ MIRROR_DIR="${MIRROR_DIR:-./backups/media}"
 LOG="${LOG:-./backups/mirror.log}"
 mkdir -p "$MIRROR_DIR"
 
+# R2 outage uploads are newer than Supabase. Never let a scheduled sync
+# overwrite/delete them before the operator completes failback.
+if [ "$FROM" = supabase ] && [ "$DEST" = r2 ]; then
+  source "$(dirname "$0")/lib/db_target.sh"
+  _db_target_init
+  R2_ROWS="$(db_psql -v ON_ERROR_STOP=1 -tAc "SELECT count(*) FROM public.media_asset WHERE storage = 'r2';")"
+  if [ "$R2_ROWS" != 0 ]; then
+    echo "Refusing Supabase -> R2: R2-backed rows exist. Complete R2 -> Supabase failback first." >&2
+    exit 1
+  fi
+fi
+
 case "$FROM->$DEST" in
   supabase-\>local)   media_rclone sync supabase:museum-media "$MIRROR_DIR/supabase" --log-file "$LOG" --log-format date,time ;;
+  r2-\>local)         media_rclone sync r2:museum-media "$MIRROR_DIR/r2" --log-file "$LOG" --log-format date,time ;;
   supabase-\>r2)      media_rclone sync supabase:museum-media r2:museum-media --log-file "$LOG" --log-format date,time ;;
   r2-\>supabase)      media_rclone sync r2:museum-media supabase:museum-media --log-file "$LOG" --log-format date,time ;;
   volume-\>local)     mkdir -p "$MIRROR_DIR/volume"; docker compose cp "backend:/app/uploads/." "$MIRROR_DIR/volume/" ;;

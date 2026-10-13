@@ -56,12 +56,20 @@ and meet only at upload time.
 `Browser --GET--> API --SELECT--> PG --JSON{urls}--> Browser
 --<img src>--> CDN directly` (backend uninvolved in step 4).
 
-**F3 — Nightly sync:** `pg_dump --> shared drive` (02:00) and
-`rclone sync Supabase --> R2 + local dir` (02:05). Two jobs: rows and
-blobs live in different systems. (rclone talks to Supabase through its
-S3-compatible endpoint — no custom code.)
+**F3 — Cloud scheduled recovery:** GitHub Actions at 02:17 Adelaide time
+runs pg_dump, then rclone sync Supabase to R2 and a runner folder, verifies
+bytes, and saves a private seven-day artifact. Activation requires repository
+admin secrets and MUSEUM_BACKUP_ENABLED=true; no member Mac is involved.
+Rclone uses the Supabase S3-compatible endpoint. While R2-backed rows exist,
+the job backs up R2 instead and refuses Supabase-to-R2 sync.
 
-**F4 — Outage:** set `MEDIA_BACKEND=r2`, recreate backend. Flows F1/F2
+**F4a — Image read failure:** MediaImage retries a failed owned Supabase
+public image once at the configured R2 public base, using the identical key.
+A second failure shows an accessible placeholder. Database URLs and the
+active writer do not change. Only already-mirrored images are recoverable;
+a complete Supabase/database outage still needs database recovery.
+
+**F4b — Operator write failover:** set `MEDIA_BACKEND=r2`, recreate backend. Flows F1/F2
 repeat with the R2 box substituted; R2 egress is free so recovery costs
 nothing.
 
@@ -155,7 +163,9 @@ Docker for offline recovery. Hosted rows remain live without the member Mac.
 
 | Failure | Response | RPO/RTO (prototype) |
 |---|---|---|
-| Supabase down | Flip `MEDIA_BACKEND` supabase → r2 (or → local if R2 unbuilt/offline) | Minutes; rehearsed |
+| Supabase image read fails, DB available | Automatic browser retry at R2 for mirrored keys | Failed image load + retry |
+| Supabase Storage write failure, DB available | Operator flips MEDIA_BACKEND to r2, then reconciles/fails back | Minutes; rehearsed |
+| Entire Supabase down | Restore DB and media to Docker offline stack | Recovery drill required |
 | Volume lost | Restore from rclone mirror (`restore_media.sh`) | Nightly RPO |
 | PG down | `restore_database.sh` from `pg_dump` rotation (7-day) | 24h RPO, <30min RTO |
 | Whole venue offline | Screen recording (risk register) | — |

@@ -10,10 +10,10 @@ Copy inventory (what lives where):
 |---|---|---|---|
 | Selected Postgres (Docker by default; Supabase for staging) | All rows incl. `media_asset` | App writes + migrations | Live |
 | Supabase bucket | Uploaded bytes (primary backend) | App uploads | Live |
-| R2 bucket | Mirror of Supabase bucket | Nightly rclone sync | ≤24h old |
+| R2 bucket | Mirror of Supabase bucket | Manual sync now; cloud nightly after activation | Last verified sync; nightly RPO pending |
 | Local volume `/app/uploads` | `local`-mode uploads | App uploads (local mode) | Live |
-| Local mirror dir | Copy of active backends | Nightly rclone sync | ≤24h old |
-| `pg_dump` rotation | Full DB snapshots, 7-day | Nightly cron | ≤24h old |
+| Local mirror dir | Copy of active backends | Manual sync or cloud recovery artifact | Last verified copy |
+| `pg_dump` rotation | Full DB snapshots, 7-day | Manual now; GitHub Actions after activation | Last verified dump; nightly RPO pending |
 
 ## 1. Schema changes (new tables/columns)
 
@@ -267,8 +267,9 @@ remains the offline fallback. Oracle is not being provisioned.
 [Oracle's FAQ](https://www.oracle.com/cloud/free/faq/) requires a card for
 identity verification, so creating an account requires explicit approval.
 Pages is deployed at https://regional-museum-platform.pages.dev/ from a
-compiled direct upload. Render is blocked on the existing organization-level
-GitHub app installation request. The current account is an organization
+compiled direct upload. The organization approved the Render integration;
+the Free API is live at https://regional-museum-platform-api.onrender.com.
+The current account is an organization
 member with repository push access, not an administrator.
 
 Scheduling decision (user requires independence from their Mac): cloud GitHub
@@ -350,20 +351,76 @@ No Render database, disk, paid plan or payment method is required. Its
 [Free service](https://render.com/docs/free) sleeps after 15 idle minutes and
 wakes on request; warm /health, then test login/media before the demo.
 
-The deployed frontend currently uses existing mock business data. The API
+The frontend keeps existing mock business data, while auth and the new
+/staff/media Media library use the real Render API (VITE_AUTH_USE_MOCKS=false).
+The API
 implements auth, staff media and user administration; collection/event/
 membership APIs remain team integration work. Do not switch all frontend
-requests to real mode before those routes are implemented. Once Render is
-connected, rebuild Pages with VITE_API_BASE_URL=<Render URL>/api and record
-exact integration coverage; no API credentials belong in frontend builds.
+requests to real mode before those routes are implemented. Pages is built with VITE_API_BASE_URL=https://regional-museum-platform-api.onrender.com/api.
+No API credentials belong in frontend builds.
 
 GitHub PR CI checks were not reported for this branch at handoff; local
 pytest/build/drill evidence is verified, but no remote CI pass is claimed.
 
-Open handover items: organization manager approves Render and configures
-GitHub backup secrets/zero spending cap; first hosted API deployment and
-scheduled backup run; two green scheduled nights; frontend business API
+Open handover items: organization manager configures GitHub backup
+secrets/zero spending cap; first scheduled backup run; two green scheduled nights; frontend business API
 integration; named second secret holder and M7 successor/transfer acceptance.
 Current cloud access is held by Rock: Supabase organization RockENZO's Org,
 Cloudflare's signed-in account (existing R2 subscription), and Render My
 Workspace. Account-owner identity/transfer must be confirmed at handover.
+
+
+## 11. Automatic image fallback and recording preparation
+
+The Pages build needs only public values: VITE_SUPABASE_URL,
+VITE_SUPABASE_BUCKET=museum-media, and VITE_R2_PUBLIC_BASE. MediaImage maps
+only this project/bucket's public image URLs to the same object key in R2.
+A primary load error triggers one R2 attempt; a second error shows Image
+unavailable. Loading another source resets the attempt. Foreign/local/R2
+URLs never redirect. This changes browser reads, not DB rows or upload mode.
+The reusable component is used in the real staff Media library; unfinished
+business pages still need their normal API/image integration.
+
+Cloud sync setup (repository administrator): Settings → Secrets and variables
+→ Actions: privately add DATABASE_URL_STAGING and MUSEUM_RCLONE_CONFIG
+(the full ignored rclone.conf content with both remotes). Set Actions variable
+MUSEUM_BACKUP_ENABLED=true; confirm zero paid overage budget. The workflow
+already exists on default dev after PR #15 merged. Run Nightly recovery
+backup manually, inspect success and its private artifact, then verify two
+scheduled nights. It runs independently of Render and any member laptop.
+This is daily replication, not instantaneous dual writing; newly uploaded
+images have no standby until the next successful mirror.
+
+Before an operator switches writes to R2, disable the scheduled workflow and
+wait for any running backup to finish. The media scripts also refuse a
+Supabase→R2 sync when R2-backed rows exist (or the DB query fails). During
+R2 mode, nightly_media backs up R2 into backups/media/r2 and byte-checks it.
+Fail back R2→Supabase, verify bytes, repoint rows, restart the sole writer,
+then re-enable scheduling. These guards do not replace operator coordination
+of a running sync. restore_media.sh r2 can load the outage copy into Docker.
+
+Recording A (automatic image-read failover, storage-only simulation):
+1. Warm Render /health, confirm Supabase DB is available and a successful
+   mirror/check has completed. Sign in as staff and open /staff/media,
+   collection object ID 6. Show the image's Supabase URL and successful load.
+2. In a browser with request blocking, block only
+   */storage/v1/object/public/museum-media/* on this Supabase host; disable
+   cache and reload. Keep Render and PostgreSQL connections available.
+3. Show the failed Supabase request, successful matching R2 request and the
+   visible image. No manual URL rewrite or upload-backend switch is involved.
+4. Unblock and reload: image loads from Supabase again. State explicitly
+   that this simulates browser image access failure, not a whole Supabase outage.
+
+Recording B (whole Supabase unavailable): use the existing disposable Docker
+recovery drill and a downloaded cloud dump/media artifact. Restore Postgres,
+restore media, repoint URLs to local, test login/read/upload offline, and
+rehearse failback. R2 does not provide a PostgreSQL server; image fallback
+alone cannot rescue a DB-dependent page when the database is down.
+
+Verification 2026-10-13: Render Free Singapore deploy from dev eb19265 live;
+health/login/me/media/CORS HTTP 200; own temporary upload HTTP 201, byte-equal
+public read HTTP 200, cleanup HTTP 204. Backend 35 tests pass. Frontend build,
+scoped ESLint and three URL-mapping tests pass. Stubbed cloud-command drills:
+R2 overwrite refused; DB failure prevents sync; normal mirror path passes;
+R2 outage path backs up R2 and does not touch Supabase. Cloud automatic
+schedule remains pending administrator activation.
