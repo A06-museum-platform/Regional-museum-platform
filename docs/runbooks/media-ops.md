@@ -8,7 +8,7 @@ Copy inventory (what lives where):
 
 | Copy | Holds | Updated by | Freshness |
 |---|---|---|---|
-| docker Postgres (primary) | All rows incl. `media_asset` | App writes + migrations | Live |
+| Selected Postgres (Docker by default; Supabase for staging) | All rows incl. `media_asset` | App writes + migrations | Live |
 | Supabase bucket | Uploaded bytes (primary backend) | App uploads | Live |
 | R2 bucket | Mirror of Supabase bucket | Nightly rclone sync | ≤24h old |
 | Local volume `/app/uploads` | `local`-mode uploads | App uploads (local mode) | Live |
@@ -145,8 +145,22 @@ Note: `mirror_media.sh --from volume` uses `docker cp` (no rclone, no
 cloud), so this whole branch works with zero keys — it is the offline
 demo path. Log drills alongside §5 above.
 Rehearse both directions once per milestone; log date + result here:
-- _Flip drill: ____-__-__ by ____ → result: _____
-- _Failback drill: ____-__-__ by ____ → result: _____
+- 2026-10-13 — Codex, disposable `museum-infra-drill` stack: snapshot import
+  PASS; 001/002/003 skip on replay; staff login 200; local upload 201;
+  read 200 with identical bytes. Backend suite: 31 passed.
+- 2026-10-13 — Codex, disposable stack: local media mirror PASS;
+  simulated file loss returned 404; `restore_media.sh` restored a 200
+  response with byte equality. This rehearses file loss, not deletion of
+  a whole volume. No existing project volume was changed.
+- 2026-10-13 — Codex, disposable stack: current-snapshot DB restore PASS
+  (4 users, 13 media including test upload). Older-schema snapshot restore
+  PASS: migration 003 ran before backend restart; same row counts.
+- 2026-10-13 — Codex, remote code path against a disposable PostgreSQL 16
+  target: public-only backup/restore PASS; unrelated `managed_guard.keep_me`
+  table and its row survived; all three migrations skipped on replay.
+  This was not a connection to hosted Supabase.
+- Cloud flip/failback and rclone agreement: PENDING credentials and bucket
+  verification. Local drills do not prove hosted availability.
 
 ## 6. Health queries (run any time)
 
@@ -172,3 +186,89 @@ FROM media_asset WHERE is_primary GROUP BY 1,2,3 HAVING count(*) > 1;
 | Page shows gradient, file exists in bucket | Missing/backfill-less DB row | §3 backfill query, then mirror |
 | Mirror drift (`rclone check` fails) | Direct bucket edits bypassing API | Re-sync from primary; stop editing copies |
 | `rclone` memorizing stale creds | Rotated keys | `rclone config` update both S3 remotes |
+
+
+## 8. Supabase Postgres staging
+
+Keep `.env` private and gitignored. Use the Connect dialog's **Session
+pooler**, port 5432 (IPv4), with `sslmode=require`. URL-encode the database
+password; the dashboard only shows `[YOUR-PASSWORD]`, not the existing
+password. Store the completed URL as `DATABASE_URL_STAGING` in `.env`.
+Database scripts read this single setting without executing the env file
+(requires host Python 3); a pre-exported value takes precedence. Compose
+passes it to the API as `DATABASE_URL`; recreate the backend after changes.
+Never paste credentials into logs, chat, PRs or screenshots.
+
+Initial import is for an **empty public schema only**:
+
+```bash
+./scripts/import_database.sh database/regional_museum_1010.sql
+./scripts/apply_migrations.sh   # all three versions must skip
+```
+
+The importer uses psql for plain SQL in one transaction, filters the exact
+PG17-only `SET transaction_timeout = 0;` line for PostgreSQL 15/16, and
+leaves the snapshot unchanged. Never load seed.sql alongside it. Tracker
+baselining recognises 003 only when its column, constraint and index exist.
+If public already has tables, stop and inventory them; this is not a license
+to overwrite an existing hosted project.
+
+Hosted backups contain **only public**, with ownership/ACL commands omitted.
+They are application backups, not backups of Supabase Auth, Storage metadata
+or other managed schemas. Hosted restore filters to public, runs atomically
+and exits on the first error. Stop any external API deployments before
+restore; the script stops/restarts the local Compose API, and terminates
+remaining database sessions. It cannot prevent external writers reconnecting.
+Verify staff login, upload, row counts by storage, migration replay and a
+fresh dump on the actual hosted target before declaring migration complete.
+
+Explicit offline switch (new shell invocation):
+
+```bash
+DATABASE_URL_STAGING='' ./scripts/apply_migrations.sh
+DATABASE_URL_STAGING='' docker compose up -d --force-recreate backend
+```
+
+Use the same empty override for offline backup/restore. Docker and hosted
+Postgres are separate databases; changing the URL does not copy their rows.
+Keep a recent hosted dump and media mirror available for offline restore.
+
+Pre-demo wake: open the Supabase dashboard, restore/resume the project if
+paused, wait for healthy status, then test API login and one existing image.
+If it cannot wake, restore the saved DB and media into Docker, repoint cloud
+URLs after copying bytes, then start local mode. Free projects may pause
+following seven days of low activity; scheduled dumps are the backup strategy,
+not PITR. See [pausing](https://supabase.com/docs/guides/platform/free-project-pausing),
+[connections](https://supabase.com/docs/guides/database/connecting-to-postgres)
+and [backups](https://supabase.com/docs/guides/platform/backups).
+
+Snapshot caveat: the October dump has 12 Supabase public media URLs stamped
+`storage=remote`. They will not be touched by the current repoint command.
+Confirm which objects this project owns, then correct classifications in a
+new append-only migration before rehearsing failover of those images.
+
+## 9. Deployment and account closeout
+
+R2 stores media and can store pg_dump files; it does not host a live
+PostgreSQL server. Its [subscription](https://developers.cloudflare.com/r2/get-started/)
+includes free monthly usage but charges usage above the allowance. The user
+reports an existing R2 account; plan, bucket scope and credentials are still
+unverified. No paid service or card-required signup has been performed.
+
+Hosting remains a decision: prefer one Always Free VM for the Compose stack
+if the owner accepts the signup requirements and capacity is available.
+[Oracle's FAQ](https://www.oracle.com/cloud/free/faq/) requires a card for
+identity verification, so creating an account requires explicit approval.
+Render with Supabase remains the fallback candidate, subject to current
+free-plan limits. Neither deployment has been provisioned or tested.
+
+Scheduling decision for the current undeployed state: backups/mirrors run
+manually from Rock's member machine before demos and after important edits.
+Nightly cron is deliberately not installed on a sleeping laptop. Once an
+always-on host is chosen, move jobs to that host and require two successful
+nightly runs before treating nightly RPO as achieved.
+
+Account inventory: Safari identifies Museum Platform Project in RockENZO's
+Org; confirmed ownership, second secret holder and M7 successor remain to be
+recorded. R2 owner/successor, hosting owner, key rotation status, and handover
+acceptance remain open. Keep secrets with no more than two holders.

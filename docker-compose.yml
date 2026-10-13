@@ -28,6 +28,7 @@ services:
     # because compose interpolates it here.
     environment:
       - MEDIA_BACKEND=${MEDIA_BACKEND:-local}
+      - DATABASE_URL=${DATABASE_URL_STAGING:-${DATABASE_URL:-postgresql://museum:museum@db:5432/museum}}
     ports:
       - "8000:8000"
     depends_on:

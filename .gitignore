@@ -41,3 +41,6 @@ Thumbs.db
 tests/load/results/*.html
 tests/load/results/*.csv
 !tests/load/results/.gitkeep
+
+# Private cloud mirror credentials
+rclone.conf
