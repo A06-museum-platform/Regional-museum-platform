@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { DEMO_USERS } from '../api/mocks/users';
+import { USE_AUTH_MOCKS } from '../api/auth';
 import Button from '../components/Button';
 import Pill from '../components/Pill';
 import styles from './SignInPage.module.css';
@@ -95,7 +96,7 @@ export default function SignInPage() {
         It exists so the three roles can be shown side by side in the Week 10
         demo without the client memorising logins.
       */}
-      <div className={styles.demo}>
+      {USE_AUTH_MOCKS && <div className={styles.demo}>
         <div className={styles.demoHead}>
           <Pill tone="ochre">Prototype</Pill>
           <strong>Demonstration accounts</strong>
@@ -124,7 +125,7 @@ export default function SignInPage() {
             </Button>
           </div>
         ))}
-      </div>
+      </div>}
     </div>
   );
 }

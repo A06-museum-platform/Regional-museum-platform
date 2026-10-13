@@ -15,6 +15,7 @@ import styles from './StaffLayout.module.css';
 const STAFF_NAV = [
   { to: '/staff', label: 'Today at a glance', end: true },
   { to: '/staff/content', label: 'Exhibitions & collections' },
+  { to: '/staff/media', label: 'Media library' },
   { to: '/staff/events', label: 'Events & workshops' },
   { to: '/staff/hours', label: 'Opening hours' },
   { to: '/staff/bookings', label: 'Bookings & check-in' },
