@@ -11,7 +11,7 @@
 # (Supabase S3 endpoint + R2 S3 endpoint; see docs/runbooks/media-ops.md).
 # Volume transfers use `docker cp` (no extra dependencies) and need the
 # backend container present (it is, whenever uploads happen).
-# Cron example: 5 2 * * * cd /path/to/Regional-museum-platform && ./scripts/mirror_media.sh
+# Cloud schedule: .github/workflows/recovery-backup.yml (admin activation required).
 set -euo pipefail
 source "$(dirname "$0")/lib/media_rclone.sh"
 

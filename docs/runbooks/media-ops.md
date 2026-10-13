@@ -68,7 +68,8 @@ then re-run the mirror (§5). Direct drops without backfill rows are the
 
 ## 4. Keeping failover copies in agreement
 
-Nightly (02:00 DB dump, 02:05 media mirror):
+Manual commands below; the selected cloud schedule runs sequentially at
+02:17 Adelaide time after administrator activation (§4b):
 ```bash
 ./scripts/backup_database.sh              # pg_dump -Fc → backups/, 7-day rotation
 ./scripts/mirror_media.sh                 # Supabase -> local mirror dir
@@ -157,8 +158,8 @@ Rehearse both directions once per milestone; log date + result here:
   target: public-only backup/restore PASS; unrelated `managed_guard.keep_me`
   table and its row survived; all three migrations skipped on replay.
   This was not a connection to hosted Supabase.
-- Cloud flip/failback and rclone agreement: PENDING credentials and bucket
-  verification. Local drills do not prove hosted availability.
+- Cloud flip/failback and rclone agreement: later verified on hosted staging;
+  see the dated results in §10.
 
 ## 6. Health queries (run any time)
 
@@ -258,8 +259,8 @@ were verified on hosted PG17 and keyless Docker PG16.
 R2 stores media and can store pg_dump files; it does not host a live
 PostgreSQL server. Its [subscription](https://developers.cloudflare.com/r2/get-started/)
 includes free monthly usage but charges usage above the allowance. The user
-reports an existing R2 account; plan, bucket scope and credentials are still
-unverified. No paid service or card-required signup has been performed.
+uses an existing R2 account; bucket-scoped credentials and public reads have
+been verified (§10). No new paid service or card-required signup was performed.
 
 Hosting decision (2026-10-13, user): Render Free API + Cloudflare Pages
 frontend, Supabase PG/Storage primary and R2 object standby. Docker Compose
@@ -424,3 +425,15 @@ scoped ESLint and three URL-mapping tests pass. Stubbed cloud-command drills:
 R2 overwrite refused; DB failure prevents sync; normal mirror path passes;
 R2 outage path backs up R2 and does not touch Supabase. Cloud automatic
 schedule remains pending administrator activation.
+
+
+Live Pages browser verification (2026-10-13): production bundle
+index-C6Nte3ye.js published; /, /signin, /staff/media and JS/CSS assets returned
+HTTP 200. Safari real staff login rendered Emma Taylor and collection object
+6's Supabase image (naturalWidth > 0). A temporary browser-document CSP
+blocked the Supabase image host: MediaImage switched automatically to
+R2 aboriginal-painted-shield.jpg with data-media-fallback=true and a loaded
+image. A second CSP blocked both hosts: Image unavailable appeared and no
+image retry remained. Reload removes these browser-only policies. Hosted
+rows, active writer and stored image objects were unchanged. This verifies
+browser image-access failure handling, not an actual provider outage.
