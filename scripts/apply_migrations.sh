@@ -20,7 +20,20 @@ db_psql -c \
 db_psql -c \
   "INSERT INTO schema_migrations (filename)
    SELECT v.filename FROM (VALUES ('001_initial_schema.sql'), ('002_media_assets.sql')) AS v(filename)
-   WHERE EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'media_asset')
+   WHERE EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'media_asset')
+   ON CONFLICT (filename) DO NOTHING;"
+
+# The October snapshot already includes all of 003, but has no tracker.
+# Check its column, constraint and index before baselining the migration.
+db_psql -v ON_ERROR_STOP=1 -c \
+  "INSERT INTO schema_migrations (filename)
+   SELECT '003_media_storage_backend.sql'
+   WHERE EXISTS (SELECT 1 FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'media_asset'
+       AND column_name = 'storage' AND is_nullable = 'NO')
+     AND EXISTS (SELECT 1 FROM pg_constraint
+       WHERE conrelid = to_regclass('public.media_asset') AND conname = 'ck_media_asset_storage')
+     AND to_regclass('public.ix_media_asset_storage') IS NOT NULL
    ON CONFLICT (filename) DO NOTHING;"
 
 for f in database/migrations/0*.sql; do

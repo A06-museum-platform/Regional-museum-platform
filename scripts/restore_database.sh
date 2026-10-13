@@ -26,7 +26,8 @@ if db_is_remote; then
   # plans forbid on the live database).
   echo "Restoring $DUMP ..."
   docker run --rm -v "$DUMP_ABS:/tmp/restore.dump:ro" postgres:16 \
-    pg_restore -d "$DATABASE_URL_STAGING" --clean --if-exists /tmp/restore.dump
+    pg_restore -d "$DATABASE_URL_STAGING" --schema=public --no-owner --no-acl \
+      --clean --if-exists --exit-on-error --single-transaction /tmp/restore.dump
 else
   echo "Dropping and recreating database 'museum'..."
   docker compose exec -T db psql -U museum -d postgres -c \
@@ -35,7 +36,8 @@ else
   # over stdin), so copy the dump into the db container first.
   echo "Restoring $DUMP ..."
   docker compose cp "$DUMP_ABS" db:/tmp/restore.dump
-  docker compose exec -T db pg_restore -U museum -d museum /tmp/restore.dump
+  docker compose exec -T db pg_restore -U museum -d museum --no-owner --no-acl \
+    --exit-on-error --single-transaction /tmp/restore.dump
   docker compose exec -T db rm /tmp/restore.dump
 fi
 
@@ -46,10 +48,8 @@ fi
 echo "Applying pending migrations ..."
 ./scripts/apply_migrations.sh
 
-if ! db_is_remote; then
-  echo "Restarting backend..."
-  docker compose up -d backend > /dev/null
-fi
+echo "Restarting backend..."
+docker compose up -d backend > /dev/null
 echo "Smoke check:"
 db_psql -c \
   "SELECT (SELECT count(*) FROM user_account) AS users, (SELECT count(*) FROM media_asset) AS media;"

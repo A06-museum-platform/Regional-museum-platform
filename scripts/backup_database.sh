@@ -16,7 +16,7 @@ LOG="$BACKUP_DIR/backup.log"
 
 echo "[$STAMP] starting pg_dump ($DB_MODE)" | tee -a "$LOG"
 if db_is_remote; then
-  docker run --rm postgres:16 pg_dump "$DATABASE_URL_STAGING" -Fc \
+  docker run --rm postgres:16 pg_dump "$DATABASE_URL_STAGING" -Fc --schema=public --no-owner --no-acl \
     > "$BACKUP_DIR/museum_${STAMP}.dump"
 else
   docker compose exec -T db pg_dump -U museum -Fc museum \
