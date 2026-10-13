@@ -367,3 +367,70 @@ integration; named second secret holder and M7 successor/transfer acceptance.
 Current cloud access is held by Rock: Supabase organization RockENZO's Org,
 Cloudflare's signed-in account (existing R2 subscription), and Render My
 Workspace. Account-owner identity/transfer must be confirmed at handover.
+
+## 11. Recording the deployed failover demo
+
+Record after the organization approves Render access and the API is deployed.
+Before recording, merge/review the recovery changes, configure Render's private
+environment, warm the Free API, and verify login, upload, and CORS from Pages.
+Use an actual API-backed staff media view: current mock business screens are
+not evidence that database/media failover works. Complete that integration
+before filming the app rather than presenting mock thumbnails as real data.
+
+Prepare authentication privately before recording. Never film env files,
+Render environment values, API-key pages, bearer tokens, or raw request headers.
+Use a dedicated demo image and keep a clean DB backup. Sync Supabase -> R2 and
+run byte checks immediately before the drill; a pending nightly workflow does
+not keep the standby up to date automatically. Perform switching off-camera
+where credentials could be visible. Capture outcomes and public image hosts.
+
+### Recording A: Supabase Storage unavailable, PostgreSQL healthy (3–5 minutes)
+
+1. Show the deployed Pages URL and a real museum image served from Supabase.
+   Upload a dedicated demo image through the real API and show its successful
+   read. Mirror it to R2 and check byte agreement before introducing failure.
+2. State the scope: "This simulates loss of Supabase image delivery; the
+   PostgreSQL database is still available." A browser request block for the
+   Supabase storage hostname can show unreadable images without pausing the
+   project. Label this a browser-side simulation: it does not prove the
+   backend upload service itself is unreachable. A backend storage-fault
+   simulation needs a separate controlled test, not a project-wide pause.
+3. Show the existing image failing. Repoint the staging media rows Supabase ->
+   R2 and change MEDIA_BACKEND=r2 in Render, then deploy/restart the service.
+   This is an operator-controlled switch; there is no automatic failover.
+4. Refresh the same item. Show the old image now returning 200 from r2.dev.
+   Upload a second demo image, show its R2 public URL and successful read.
+   Keep the failure simulation active while proving R2 serving works.
+5. Remove the simulated block. Mirror R2 -> Supabase first, including the new
+   upload, then repoint R2 -> Supabase and redeploy MEDIA_BACKEND=supabase.
+   Show both old and new images working. Delete only this drill's uploads
+   through the API, refresh mirrors, and save the dated result in §10.
+
+Suggested narration: "R2 holds mirrored image bytes. The app still reads its
+records from Supabase PostgreSQL. We manually switch storage and rewrite
+existing image URLs, then copy outage-window uploads back before failback."
+
+### Recording B: Full Supabase outage, offline recovery (2–3 minutes)
+
+Do not describe Recording A as a complete Supabase outage. This deployment
+has no second cloud PostgreSQL server. R2 cannot execute PostgreSQL queries,
+and Hyperdrive connects to an existing database rather than replacing it.
+
+Prepare a recent database dump and the Supabase media mirror on the recovery
+machine before disconnecting it. Demonstrate the previously rehearsed Docker
+PG16 restore, migrations/access policy, media restore from the local mirror,
+URL repointing to /uploads, and MEDIA_BACKEND=local with the staging URL
+explicitly empty. Use a disposable recovery stack so project volumes are
+preserved. Show staff login and old image reads while offline, plus a new
+local upload. Label the recording "offline Docker fallback"; the Render
+service does not automatically become a second PostgreSQL host.
+
+Keep offline writes in the recovery database until a reviewed reconciliation
+or restore plan is chosen. Switching the cloud URL back alone does not copy
+offline database changes into Supabase. Do not overwrite the hosted database
+just to conclude the recording.
+
+Current readiness: storage and offline drills passed; recording storyboard
+prepared; Render deployment, real frontend/API integration, and the final
+deployed recording remain pending. Nightly sync is prepared but requires
+repository-admin secrets, enablement and successful cloud runs.
