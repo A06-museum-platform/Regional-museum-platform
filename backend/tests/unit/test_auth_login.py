@@ -34,7 +34,7 @@ class _FakeDB:
         return _Result(self._row)
 
 
-def _row(email="member@example.com", password="s3cret", role="admin"):
+def _row(email="member@example.com", password="s3cret", role="admin", is_active=True):
     return type(
         "Row",
         (),
@@ -45,6 +45,7 @@ def _row(email="member@example.com", password="s3cret", role="admin"):
             "last_name": "Lovelace",
             "password_hash": hash_password(password),
             "role_name": role,
+            "is_active": is_active,
         },
     )()
 
@@ -122,3 +123,24 @@ def test_login_lowercases_capitalised_db_role():
         HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
     )
     assert payload["role"] == "admin"
+
+
+def test_login_disabled_account_403():
+    client = _client(_row(is_active=False))
+    resp = client.post(
+        "/api/auth/login",
+        json={"email": "member@example.com", "password": "s3cret"},
+    )
+    assert resp.status_code == 403
+    assert resp.json()["code"] == "ACCOUNT_DISABLED"
+
+
+def test_login_disabled_account_wrong_password_still_401():
+    # Don't reveal that a disabled account exists without the password.
+    client = _client(_row(is_active=False))
+    resp = client.post(
+        "/api/auth/login",
+        json={"email": "member@example.com", "password": "nope"},
+    )
+    assert resp.status_code == 401
+    assert resp.json()["code"] == "AUTH_INVALID"

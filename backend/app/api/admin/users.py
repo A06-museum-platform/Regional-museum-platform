@@ -1,14 +1,20 @@
-"""Admin user listing (Flow 9, docs/api-contract.md section 9).
+"""Admin user management (Flow 9, docs/api-contract.md section 9).
 
-GET /api/users -> paginated {items, total, page, size}
+GET   /api/users       -> paginated {items, total, page, size}
+PATCH /api/users/{id}  -> body any subset of {role, is_active}; returns
+                          the updated user
 
-Each user's role is taken from user_role/role (a user can hold more
-than one role; this picks the highest-privilege one -- admin > staff >
-member > visitor, ranked by name rather than role_id -- matching the
-login flow in app/services/auth_service.py) and lower-cased to match the
-login response. is_active / access_status from the contract aren't in
-database/migrations/001_initial_schema.sql yet -- user_account has no
-such column -- so they're left out here rather than faked.
+Each user's role is taken from user_role/role via
+app.services.auth_service.USER_SELECT (highest-privilege role, lower
+case), so this screen agrees with what login returns. Changing the role
+replaces all of the user's role rows with the single new one. is_active
+comes from 007_user_account_is_active.sql; a disabled account can't log
+in and its existing tokens stop working on the next request. The
+contract's access_status is not stored separately -- it would only
+restate is_active -- so it's left out.
+
+An admin can't change their own role or disable themselves: one careless
+click would otherwise leave the museum with no administrator.
 """
 
 from fastapi import APIRouter, Depends, Query
@@ -16,8 +22,10 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import require_admin
+from app.core.errors import ApiError
 from app.db.session import get_session
-from app.schemas.user import UserListOut, UserOut
+from app.schemas.user import AdminUserOut, UserListOut, UserUpdateIn
+from app.services.auth_service import USER_SELECT, to_admin_user
 
 router = APIRouter(prefix="/api", tags=["admin-users"])
 
@@ -30,34 +38,57 @@ async def list_users(
     _admin: dict = Depends(require_admin),
 ):
     offset = (page - 1) * size
+    total = (await db.execute(text("SELECT COUNT(*) FROM user_account"))).scalar_one()
     rows = (
         await db.execute(
-            text(
-                "SELECT u.user_id, u.email, u.first_name, u.last_name, "
-                " (SELECT r.role_name FROM user_role ur "
-                "   JOIN role r ON r.role_id = ur.role_id "
-                "  WHERE ur.user_id = u.user_id "
-                "  ORDER BY CASE lower(r.role_name) "
-                "    WHEN 'admin' THEN 4 WHEN 'staff' THEN 3 "
-                "    WHEN 'member' THEN 2 ELSE 1 END DESC "
-                "  LIMIT 1) AS role_name, "
-                " COUNT(*) OVER() AS total_count "
-                "FROM user_account u "
-                "ORDER BY u.user_id "
-                "LIMIT :limit OFFSET :offset"
-            ),
+            text(USER_SELECT + "ORDER BY u.user_id LIMIT :limit OFFSET :offset"),
             {"limit": size, "offset": offset},
         )
     ).all()
+    return UserListOut(
+        items=[to_admin_user(row) for row in rows], total=total, page=page, size=size
+    )
 
-    total = rows[0].total_count if rows else 0
-    items = [
-        UserOut(
-            id=row.user_id,
-            email=row.email,
-            display_name=f"{row.first_name} {row.last_name}",
-            role=(row.role_name or "member").lower(),
+
+async def _load(db: AsyncSession, user_id: int):
+    return (
+        await db.execute(text(USER_SELECT + "WHERE u.user_id = :user_id"), {"user_id": user_id})
+    ).first()
+
+
+@router.patch("/users/{user_id}", response_model=AdminUserOut)
+async def update_user(
+    user_id: int,
+    body: UserUpdateIn,
+    db: AsyncSession = Depends(get_session),
+    admin: dict = Depends(require_admin),
+):
+    if user_id == int(admin["sub"]) and (body.role is not None or body.is_active is not None):
+        raise ApiError(409, "You cannot change your own role or access", "CANNOT_MODIFY_SELF")
+
+    if await _load(db, user_id) is None:
+        raise ApiError(404, "User not found", "USER_NOT_FOUND")
+
+    if body.role is not None:
+        role_id = (
+            await db.execute(
+                text("SELECT role_id FROM role WHERE lower(role_name) = :role"),
+                {"role": body.role},
+            )
+        ).scalar_one_or_none()
+        if role_id is None:
+            raise ApiError(422, "Invalid input data", "VALIDATION_ERROR")
+        await db.execute(text("DELETE FROM user_role WHERE user_id = :user_id"), {"user_id": user_id})
+        await db.execute(
+            text("INSERT INTO user_role (user_id, role_id) VALUES (:user_id, :role_id)"),
+            {"user_id": user_id, "role_id": role_id},
         )
-        for row in rows
-    ]
-    return UserListOut(items=items, total=total, page=page, size=size)
+
+    if body.is_active is not None:
+        await db.execute(
+            text("UPDATE user_account SET is_active = :is_active WHERE user_id = :user_id"),
+            {"is_active": body.is_active, "user_id": user_id},
+        )
+
+    await db.commit()
+    return to_admin_user(await _load(db, user_id))

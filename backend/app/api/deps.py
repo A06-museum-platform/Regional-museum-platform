@@ -1,11 +1,14 @@
 """Shared FastAPI dependencies.
 
-require_staff / require_admin are role gates that verify the JWT
-signature and the role claim only, without a database round trip.
+get_current_user verifies the JWT and loads the account from the
+database, so a token for a deleted or disabled user is rejected. Every
+failure is a 401 -- the front end clears its stored token only on 401,
+never on 404/500.
 
-get_current_user additionally loads the account from the database, so a
-token for a deleted user is rejected. Every failure is a 401 -- the
-front end clears its stored token only on 401, never on 404/500.
+require_staff / require_admin build on it and check the role from the
+database rather than the token's role claim, so an admin changing a
+role or disabling an account takes effect on the next request instead
+of when the token expires. They return {sub, role} like a token payload.
 """
 
 from typing import Optional
@@ -54,19 +57,21 @@ async def get_current_user(
     return user
 
 
-def require_staff(
+async def require_staff(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+    db: AsyncSession = Depends(get_session),
 ) -> dict:
-    payload = _decode(credentials)
-    if payload.get("role") not in STAFF_ROLES:
+    user = await get_current_user(credentials, db)
+    if user.role not in STAFF_ROLES:
         raise ApiError(403, "Staff role required", "FORBIDDEN")
-    return payload
+    return {"sub": str(user.id), "role": user.role}
 
 
-def require_admin(
+async def require_admin(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+    db: AsyncSession = Depends(get_session),
 ) -> dict:
-    payload = _decode(credentials)
-    if payload.get("role") != "admin":
+    user = await get_current_user(credentials, db)
+    if user.role != "admin":
         raise ApiError(403, "Admin access required", "FORBIDDEN")
-    return payload
+    return {"sub": str(user.id), "role": user.role}

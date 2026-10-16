@@ -29,7 +29,7 @@ class _FakeDB:
         return _Result(self._row)
 
 
-def _row(role="Member"):
+def _row(role="Member", is_active=True):
     return type(
         "Row",
         (),
@@ -40,6 +40,7 @@ def _row(role="Member"):
             "last_name": "Wilson",
             "password_hash": "unused",
             "role_name": role,
+            "is_active": is_active,
         },
     )()
 
@@ -83,6 +84,14 @@ def test_me_without_token_401():
 def test_me_deleted_user_401():
     # Token is validly signed, but the account no longer exists.
     client = _client(None)
+    resp = client.get("/api/auth/me", headers=_auth())
+    assert resp.status_code == 401
+    assert resp.json()["code"] == "AUTH_INVALID"
+
+
+def test_me_disabled_user_401():
+    # An admin disabled the account after the token was issued.
+    client = _client(_row(is_active=False))
     resp = client.get("/api/auth/me", headers=_auth())
     assert resp.status_code == 401
     assert resp.json()["code"] == "AUTH_INVALID"
