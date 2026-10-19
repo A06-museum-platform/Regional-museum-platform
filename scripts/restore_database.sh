@@ -1,19 +1,39 @@
 #!/usr/bin/env bash
 # Restore a pg_dump snapshot (Tier 1).
 # Usage: ./scripts/restore_database.sh backups/museum_2026-09-20_0200.dump
-# Target: local compose db by default (drop/recreate); DATABASE_URL_STAGING
+#        DB_TARGET=staging ./scripts/restore_database.sh [--yes-i-mean-staging] <dump>
+# Target: local compose db by default (drop/recreate); DB_TARGET=staging
 # restores hosted Supabase Postgres instead (--clean into the live database,
-# which hosted plans don't let you drop).
+# which hosted plans don't let you drop). Staging requires typing `staging`
+# at the prompt, or --yes-i-mean-staging for non-interactive runs.
 # WARNING: replaces all data in the target database. Never point at prod.
 set -euo pipefail
 
 source "$(dirname "$0")/lib/db_target.sh"
 _db_target_init
-echo "Target: $DB_MODE"
 
-DUMP="${1:?usage: restore_database.sh <dump-file>}"
+CONFIRMED=0
+DUMP=""
+for arg in "$@"; do
+  case "$arg" in
+    --yes-i-mean-staging) CONFIRMED=1 ;;
+    -*) echo "unknown option: $arg" >&2; exit 1 ;;
+    *) DUMP="$arg" ;;
+  esac
+done
+: "${DUMP:?usage: restore_database.sh [--yes-i-mean-staging] <dump-file>}"
 test -f "$DUMP" || { echo "dump file not found: $DUMP"; exit 1; }
 DUMP_ABS="$(cd "$(dirname "$DUMP")" && pwd)/$(basename "$DUMP")"
+
+if db_is_remote && [ "$CONFIRMED" != 1 ]; then
+  echo "About to terminate all sessions and pg_restore --clean $DUMP into HOSTED STAGING." >&2
+  if [ ! -t 0 ]; then
+    echo "Refusing: no terminal for confirmation. Re-run with --yes-i-mean-staging." >&2
+    exit 1
+  fi
+  read -r -p "Type 'staging' to continue: " answer
+  [ "$answer" = staging ] || { echo "Aborted." >&2; exit 1; }
+fi
 
 # Pooled writers block destructive restore — stop local backend, or
 # terminate other sessions on a remote target.
@@ -50,6 +70,10 @@ echo "Applying pending migrations ..."
 
 echo "Restarting backend..."
 docker compose up -d backend > /dev/null
+if db_is_remote; then
+  echo "Note: the local backend restarted against the local db. To serve staging run:"
+  echo "  docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d backend"
+fi
 echo "Smoke check:"
 db_psql -c \
   "SELECT (SELECT count(*) FROM user_account) AS users, (SELECT count(*) FROM media_asset) AS media;"

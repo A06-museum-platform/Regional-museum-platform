@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
+      # Scripts default to the local compose db; opt in to hosted staging.
+      DB_TARGET: staging
       DATABASE_URL_STAGING: ${{ secrets.DATABASE_URL_STAGING }}
       MUSEUM_RCLONE_CONFIG: ${{ secrets.MUSEUM_RCLONE_CONFIG }}
     steps:
