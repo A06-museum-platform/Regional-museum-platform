@@ -20,11 +20,11 @@ docker compose up --build
 
 Once the containers are running, open another terminal at the repository root
 and apply the schema migrations, then load the demo data into the fresh local
-database. Keep `DATABASE_URL_STAGING` unset or empty in `.env` for local setup;
-the empty export below also forces the migration script to use the local DB.
+database. Scripts and `docker compose` use the local database by default;
+hosted staging needs an explicit `DB_TARGET=staging` prefix (see
+`docs/runbooks/media-ops.md`).
 
 ```bash
-export DATABASE_URL_STAGING=''
 ./scripts/apply_migrations.sh
 docker compose exec -T db psql -U museum -d museum -v ON_ERROR_STOP=1 --single-transaction < database/seed/seed.sql
 ```
