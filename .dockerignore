@@ -1,6 +1,11 @@
 node_modules
 dist
-.env.local
+.env
+.env.*
+!.env.example
+rclone.conf
+*.dump
+database/*.sql
 coverage
 uploads
 backups
