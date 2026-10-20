@@ -4,6 +4,7 @@
 # so only the URL prefix changes — rows, owners and primaries are untouched.
 #   ./scripts/repoint_media_urls.sh supabase r2     # Supabase outage: serve from R2
 #   ./scripts/repoint_media_urls.sh r2 supabase     # failback when Supabase recovers
+# Local compose db by default; prefix DB_TARGET=staging to repoint hosted rows.
 # Backends and their URL prefixes live in backend/app/services/storage.py
 # (public_url) — keep them in sync when that file changes.
 set -euo pipefail

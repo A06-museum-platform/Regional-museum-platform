@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 # Import the plain October snapshot into an EMPTY application schema.
-# Export DATABASE_URL_STAGING from the private .env for hosted staging.
+# Local compose db by default; DB_TARGET=staging imports into hosted staging.
 # Never combine this dump with seed.sql. Existing databases use restore_database.sh.
 set -euo pipefail
 source "$(dirname "$0")/lib/db_target.sh"
 _db_target_init
 DUMP="${1:-database/regional_museum_1010.sql}"
 test -f "$DUMP" || { echo "dump file not found: $DUMP" >&2; exit 1; }
-echo "Target: $DB_MODE"
 TABLES="$(db_psql -v ON_ERROR_STOP=1 -tAc \
   "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';")"
 if [ "$TABLES" != "0" ]; then

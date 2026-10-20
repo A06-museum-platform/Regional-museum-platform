@@ -1,0 +1,9 @@
+# Opt-in overlay: point the local backend container at hosted staging.
+# Use it explicitly on every command that (re)creates the backend:
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d --force-recreate backend
+# A plain `docker compose up` ignores this file and uses the local db.
+# DATABASE_URL_STAGING is read from the shell or .env (as data).
+services:
+  backend:
+    environment:
+      - DATABASE_URL=${DATABASE_URL_STAGING:?set DATABASE_URL_STAGING in .env to use the staging overlay}

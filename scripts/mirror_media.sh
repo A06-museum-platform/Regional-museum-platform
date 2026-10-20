@@ -41,6 +41,11 @@ mkdir -p "$MIRROR_DIR"
 if [ "$FROM" = supabase ] && [ "$DEST" = r2 ]; then
   source "$(dirname "$0")/lib/db_target.sh"
   _db_target_init
+  # Hosted media rows live in staging; a local-db check would prove nothing.
+  if ! db_is_remote; then
+    echo "Refusing Supabase -> R2 without DB_TARGET=staging: the R2-row guard must query the hosted database." >&2
+    exit 1
+  fi
   R2_ROWS="$(db_psql -v ON_ERROR_STOP=1 -tAc "SELECT count(*) FROM public.media_asset WHERE storage = 'r2';")"
   if [ "$R2_ROWS" != 0 ]; then
     echo "Refusing Supabase -> R2: R2-backed rows exist. Complete R2 -> Supabase failback first." >&2

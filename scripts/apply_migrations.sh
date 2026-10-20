@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Apply pending SQL migrations in filename order, tracking what ran.
 # Re-running is safe: applied files are skipped via schema_migrations.
-# Target: local compose db by default; set DATABASE_URL_STAGING for hosted
-# Supabase Postgres (session-mode pooler URL + ?sslmode=require).
+# Target: local compose db by default; DB_TARGET=staging selects hosted
+# Supabase Postgres via DATABASE_URL_STAGING (see scripts/lib/db_target.sh).
 # Usage: ./scripts/apply_migrations.sh
+#        DB_TARGET=staging ./scripts/apply_migrations.sh
 set -euo pipefail
 
 source "$(dirname "$0")/lib/db_target.sh"
 _db_target_init
-echo "Target: $DB_MODE"
 
 db_psql -c \
   "CREATE TABLE IF NOT EXISTS schema_migrations (filename TEXT PRIMARY KEY, applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);"

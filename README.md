@@ -18,11 +18,23 @@ docker compose up --build
 - Frontend: http://localhost:5173
 - API docs: http://localhost:8000/docs
 
-Then seed placeholder data:
+Once the containers are running, open another terminal at the repository root
+and apply the schema migrations, then load the demo data into the fresh local
+database. Scripts and `docker compose` use the local database by default;
+hosted staging needs an explicit `DB_TARGET=staging` prefix (see
+`docs/runbooks/media-ops.md`).
 
 ```bash
-python scripts/seed_database.py
+./scripts/apply_migrations.sh
+docker compose exec -T db psql -U museum -d museum -v ON_ERROR_STOP=1 --single-transaction < database/seed/seed.sql
 ```
+
+Migrations can be rerun safely; load the seed data only once on a fresh database
+(it inserts fixed demo records and is not idempotent).
+
+`/health` is a DB-free liveness probe for Render and Compose. `/api/health`
+checks database readiness with a two-second timeout and returns 503 if the
+database is unavailable.
 
 ## Demo accounts
 

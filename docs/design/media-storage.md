@@ -151,9 +151,10 @@ owner-agnostic and survives either shape unchanged.
 
 ## 7. Configuration
 
-Database staging uses DATABASE_URL_STAGING (IPv4 session pooler, TLS);
-Compose passes it as DATABASE_URL, while an explicit empty override selects
-Docker for offline recovery. Hosted rows remain live without the member Mac.
+Database staging uses DATABASE_URL_STAGING (IPv4 session pooler, TLS), but
+only on explicit per-command opt-in: `DB_TARGET=staging` for scripts and the
+docker-compose.staging.yml overlay for the Compose API. The Docker db is the
+default, so offline recovery needs no override. Hosted rows remain live without the member Mac.
 
 `.env` (gitignored, ≤2 holders for secrets): `SUPABASE_URL`,
 `SUPABASE_SERVICE_KEY`, `SUPABASE_BUCKET`, `R2_*` (P3), `MEDIA_BACKEND`

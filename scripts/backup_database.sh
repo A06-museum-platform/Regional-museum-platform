@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Nightly Postgres backup (Tier 1). Run from the repository root.
-# Target: local compose db by default; DATABASE_URL_STAGING dumps hosted
+# Target: local compose db by default; DB_TARGET=staging dumps hosted
 # Supabase Postgres instead (same file format, same restore path).
 # Cron example: 0 2 * * * cd /path/to/Regional-museum-platform && ./scripts/backup_database.sh
 set -euo pipefail

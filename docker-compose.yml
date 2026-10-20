@@ -28,7 +28,10 @@ services:
     # because compose interpolates it here.
     environment:
       - MEDIA_BACKEND=${MEDIA_BACKEND:-local}
-      - DATABASE_URL=${DATABASE_URL_STAGING:-${DATABASE_URL:-postgresql://museum:museum@db:5432/museum}}
+      # Always the local db here, deliberately not interpolated: nothing in
+      # .env can repoint it. Staging is a per-command opt-in via the overlay:
+      #   docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d backend
+      - DATABASE_URL=postgresql://museum:museum@db:5432/museum
     ports:
       - "8000:8000"
     depends_on:

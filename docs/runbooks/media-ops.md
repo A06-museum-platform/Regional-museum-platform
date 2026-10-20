@@ -73,7 +73,7 @@ Manual commands below; the selected cloud schedule runs sequentially at
 ```bash
 ./scripts/backup_database.sh              # pg_dump -Fc → backups/, 7-day rotation
 ./scripts/mirror_media.sh                 # Supabase -> local mirror dir
-./scripts/mirror_media.sh --dest r2       # Supabase -> R2 warm standby (needs R2 keys)
+DB_TARGET=staging ./scripts/mirror_media.sh --dest r2   # Supabase -> R2 warm standby (needs R2 keys)
 ./scripts/mirror_media.sh --from volume   # uploads volume (local-mode files) -> mirror dir
 ```
 Manual re-sync after any bulk change: same commands, then verify:
@@ -111,15 +111,18 @@ shared `storage_key` layout + rclone sync), so old thumbnails keep working.
 ```bash
 # 0. Precondition: the standby actually holds the bytes. If the last
 #    nightly mirror is stale, sync first:
-./scripts/mirror_media.sh --dest r2
-# 1. Repoint existing rows supabase -> r2 (mechanical prefix rewrite):
-SUPABASE_URL=... R2_PUBLIC_BASE=... ./scripts/repoint_media_urls.sh supabase r2
-# 2. Flip serving to R2 (or `local` if R2 unbuilt / offline demo):
+DB_TARGET=staging ./scripts/mirror_media.sh --dest r2
+# 1. Repoint existing rows supabase -> r2 (mechanical prefix rewrite;
+#    drop DB_TARGET=staging only when the rows live in the local db):
+DB_TARGET=staging SUPABASE_URL=... R2_PUBLIC_BASE=... ./scripts/repoint_media_urls.sh supabase r2
+# 2. Flip serving to R2 (or `local` if R2 unbuilt / offline demo).
+#    Compose uses the local db; if this API serves staging, add
+#    -f docker-compose.yml -f docker-compose.staging.yml to each `up`:
 MEDIA_BACKEND=r2 docker compose up -d backend
 # ... verify: upload → 201, old pages render from R2 URLs, then:
 # Failback when Supabase recovers (mirror image of the above):
 ./scripts/mirror_media.sh --dest supabase   # copy outage-window files back
-SUPABASE_URL=... R2_PUBLIC_BASE=... ./scripts/repoint_media_urls.sh r2 supabase
+DB_TARGET=staging SUPABASE_URL=... R2_PUBLIC_BASE=... ./scripts/repoint_media_urls.sh r2 supabase
 MEDIA_BACKEND=supabase docker compose up -d backend
 ```
 
@@ -195,16 +198,28 @@ Keep `.env` private and gitignored. Use the Connect dialog's **Session
 pooler**, port 5432 (IPv4), with `sslmode=require`. URL-encode the database
 password; the dashboard only shows `[YOUR-PASSWORD]`, not the existing
 password. Store the completed URL as `DATABASE_URL_STAGING` in `.env`.
-Database scripts read this single setting without executing the env file
-(requires host Python 3); a pre-exported value takes precedence. Compose
-passes it to the API as `DATABASE_URL`; recreate the backend after changes.
+Storing it selects nothing: scripts and Compose use the local Docker db by
+default. Opt in to staging per command, from the shell:
+
+```bash
+DB_TARGET=staging ./scripts/apply_migrations.sh   # likewise backup/import/restore/repoint
+docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d --force-recreate backend
+```
+
+With `DB_TARGET=staging`, scripts read only this setting from `.env` without
+executing the env file (requires host Python 3); a pre-exported value takes
+precedence. They fail if it is empty, reject unknown `DB_TARGET` values, and
+print the target first. Never put `DB_TARGET` in `.env`. Hosted restore also
+requires typing `staging` (or `--yes-i-mean-staging`). The guarded
+`mirror_media.sh --dest r2` (Supabase -> R2) checks hosted rows, so it also
+needs `DB_TARGET=staging`.
 Never paste credentials into logs, chat, PRs or screenshots.
 
 Initial import is for an **empty public schema only**:
 
 ```bash
-./scripts/import_database.sh database/regional_museum_1010.sql
-./scripts/apply_migrations.sh   # all migration versions must skip
+DB_TARGET=staging ./scripts/import_database.sh database/regional_museum_1010.sql
+DB_TARGET=staging ./scripts/apply_migrations.sh   # all migration versions must skip
 ```
 
 The importer uses psql for plain SQL in one transaction, filters the exact
@@ -228,14 +243,14 @@ remaining database sessions. It cannot prevent external writers reconnecting.
 Verify staff login, upload, row counts by storage, migration replay and a
 fresh dump on the actual hosted target before declaring migration complete.
 
-Explicit offline switch (new shell invocation):
+Offline (local) is the default, so no override is needed:
 
 ```bash
-DATABASE_URL_STAGING='' ./scripts/apply_migrations.sh
-DATABASE_URL_STAGING='' MEDIA_BACKEND=local docker compose up -d --force-recreate backend
+./scripts/apply_migrations.sh
+MEDIA_BACKEND=local docker compose up -d --force-recreate backend
 ```
 
-Use the same empty override for offline backup/restore. Docker and hosted
+Offline backup/restore likewise run without `DB_TARGET`. Docker and hosted
 Postgres are separate databases; changing the URL does not copy their rows.
 Keep a recent hosted dump and media mirror available for offline restore.
 

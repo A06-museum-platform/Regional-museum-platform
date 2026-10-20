@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Run on a cloud runner or ops host after the database dump.
+# Checks hosted media rows only with DB_TARGET=staging (as the workflow sets).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source ./scripts/lib/media_rclone.sh
