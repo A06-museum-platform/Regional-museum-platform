@@ -31,6 +31,10 @@ window, so two bookings can't both take the last places. A booking row
 (migration 008) holds the reference, window, visitor and accessibility
 needs, with one ticket_reservation row per ticket type under it, which is
 what availability counts.
+
+Reading a booking back gives the same shape. Nothing marks a visit as done,
+so a reserved booking whose date has passed (museum-local) reads as
+completed, like the demo's past bookings.
 """
 
 import re
@@ -158,13 +162,19 @@ def _closed(visit_date: date, note: str = "") -> AvailabilityOut:
     )
 
 
-async def get_availability(db: AsyncSession, visit_date: date) -> AvailabilityOut:
-    clock = (
+async def _museum_clock(db: AsyncSession):
+    """Today's date and the time now (today, now_time), in the museum's time
+    zone, whatever zone the server runs in."""
+    return (
         await db.execute(
             text(f"SELECT (now() AT TIME ZONE '{MUSEUM_TIMEZONE}')::date AS today, "
                  f"(now() AT TIME ZONE '{MUSEUM_TIMEZONE}')::time AS now_time")
         )
     ).first()
+
+
+async def get_availability(db: AsyncSession, visit_date: date) -> AvailabilityOut:
+    clock = await _museum_clock(db)
     if visit_date < clock.today:
         return _closed(visit_date, "That date has passed.")
     if visit_date > clock.today + timedelta(days=BOOKING_HORIZON_DAYS):
@@ -213,9 +223,13 @@ async def get_availability(db: AsyncSession, visit_date: date) -> AvailabilityOu
     )
 
 
-def _to_booking(row, lines) -> BookingOut:
+def _to_booking(row, lines, today: Optional[date] = None) -> BookingOut:
     """A booking row (_BOOKING_COLUMNS) and its ticket lines (ticket_type_id,
-    ticket_name, ticket_quantity, unit_price) in the demo's booking shape."""
+    ticket_name, ticket_quantity, unit_price) in the demo's booking shape.
+    Given today's date, a reservation for an earlier day reads completed."""
+    status = row.status.lower()
+    if status == "reserved" and today is not None and row.visit_date < today:
+        status = "completed"
     out_lines = [
         BookingLineOut(
             ticket_type_id=line.ticket_type_id,
@@ -242,10 +256,36 @@ def _to_booking(row, lines) -> BookingOut:
             mobile=row.visitor_mobile or "",
         ),
         accessibility=list(row.accessibility),
-        status=row.status.lower(),
+        status=status,
         payment=SIMULATED_PAYMENT,
         created_at=row.created_at,
     )
+
+
+async def get_booking(db: AsyncSession, reference: str, user_id: int, sees_all: bool) -> BookingOut:
+    """One booking by its reference, for its owner, or anyone when sees_all
+    (staff and admins). Someone else's booking is reported as missing, not
+    forbidden: a 403 would confirm that the reference exists."""
+    row = (
+        await db.execute(
+            text(f"SELECT {_BOOKING_COLUMNS} FROM booking WHERE booking_reference = :reference"),
+            {"reference": reference.strip().upper()},
+        )
+    ).first()
+    if row is None or (row.user_id != user_id and not sees_all):
+        raise ApiError(404, "We could not find that booking.", "NOT_FOUND")
+    lines = (
+        await db.execute(
+            text("SELECT tr.ticket_type_id, tt.ticket_name, tr.ticket_quantity, "
+                 "COALESCE(tr.unit_price, tt.price) AS unit_price "
+                 "FROM ticket_reservation tr "
+                 "JOIN ticket_type tt ON tt.ticket_type_id = tr.ticket_type_id "
+                 "WHERE tr.booking_id = :booking_id ORDER BY tr.reservation_id"),
+            {"booking_id": row.booking_id},
+        )
+    ).all()
+    clock = await _museum_clock(db)
+    return _to_booking(row, lines, today=clock.today)
 
 
 async def _insert_booking(db: AsyncSession, user_id: int, body: BookingIn, start: int):
