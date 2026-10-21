@@ -16,6 +16,7 @@ from app.api.public.auth import router as auth_router
 from app.api.public.collections import router as collections_router
 from app.api.public.events import router as events_router
 from app.api.public.membership_plans import router as membership_plans_router
+from app.api.public.ticket_types import router as ticket_types_router
 from app.api.staff.media import router as staff_media_router
 from app.core.config import get_settings
 from app.core.errors import ApiError, api_error_handler
@@ -27,6 +28,7 @@ app.include_router(auth_router)
 app.include_router(membership_plans_router)
 app.include_router(collections_router)
 app.include_router(events_router)
+app.include_router(ticket_types_router)
 app.include_router(member_membership_router)
 app.include_router(staff_media_router)
 app.include_router(admin_users_router)
