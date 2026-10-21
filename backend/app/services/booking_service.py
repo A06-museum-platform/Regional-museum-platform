@@ -32,6 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.booking import ArrivalWindowOut, AvailabilityOut, TicketTypeOut
 from app.services.event_service import MUSEUM_TIMEZONE
 from app.services.membership_service import MEMBERSHIP_PLANS, current_membership
+from app.services.opening_hours_service import hours_on
 
 # Compared case-insensitively with ticket_type.ticket_name.
 MEMBER_TICKET_NAME = "member"
@@ -42,9 +43,6 @@ MAX_TICKETS_PER_BOOKING = 10
 WINDOW_MINUTES = 120
 WINDOW_CAPACITY = 60
 BOOKING_HORIZON_DAYS = 60
-
-# opening_hours.day_of_week values, indexed by date.weekday() (Monday is 0).
-_DAY_NAMES = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 
 
 def to_cents(price) -> int:
@@ -125,13 +123,7 @@ async def get_availability(db: AsyncSession, visit_date: date) -> AvailabilityOu
     if visit_date > clock.today + timedelta(days=BOOKING_HORIZON_DAYS):
         return _closed(visit_date, f"Bookings open {BOOKING_HORIZON_DAYS} days ahead.")
 
-    hours = (
-        await db.execute(
-            text("SELECT oh.open_time, oh.close_time, oh.is_closed FROM opening_hours oh "
-                 "WHERE oh.day_of_week = :day ORDER BY oh.museum_info_id LIMIT 1"),
-            {"day": _DAY_NAMES[visit_date.weekday()]},
-        )
-    ).first()
+    hours = await hours_on(db, visit_date)
     if hours is None or hours.is_closed:
         return _closed(visit_date)
 
