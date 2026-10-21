@@ -1,6 +1,8 @@
 """Pydantic schemas for general-admission ticket booking (docs/decisions.md,
-"Booking and membership"). Money is always integer cents."""
+"Booking and membership"). Money is always integer cents; times of day are
+museum-local "HH:MM" strings."""
 
+import datetime
 from typing import Optional
 
 from pydantic import BaseModel
@@ -29,3 +31,21 @@ class TicketTypeListOut(BaseModel):
     # Tickets of every type together in one booking; more is
     # BOOKING_LIMIT_EXCEEDED.
     max_per_booking: int
+
+
+class ArrivalWindowOut(BaseModel):
+    start: str
+    end: str
+    places_left: int
+
+
+class AvailabilityOut(BaseModel):
+    """GET /api/bookings/availability for one date. A day with no window
+    left to book reads is_closed, with the reason in note when there is one."""
+
+    date: datetime.date
+    is_closed: bool
+    opens_at: Optional[str]
+    closes_at: Optional[str]
+    note: str
+    windows: list[ArrivalWindowOut]
