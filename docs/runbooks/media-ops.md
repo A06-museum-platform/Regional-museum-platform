@@ -469,3 +469,57 @@ GitHub Free includes 2,000 standard runner minutes and 500 MB artifact storage,
 shared with other organization workloads. Secret storage has no separate fee.
 See [Secrets permissions](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets)
 and [Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
+
+
+## 12. Automatic code deployment from dev (2026-10-23)
+
+Render's live service dashboard was verified: Free Python service, linked
+private repository A06-museum-platform/Regional-museum-platform, dev branch,
+backend root and Auto-Deploy On Commit. Commit 693b24e was already live.
+render.yaml now explicitly records branch dev and autoDeployTrigger commit;
+the dashboard is the actual configuration for this existing non-Blueprint
+service. Changes outside backend may not trigger a backend rebuild.
+
+The existing Pages Direct Upload project cannot be converted to native Git
+integration. Preserve its URL and use the existing CI frontend job instead.
+Cloudflare's production branch is dev. After backend tests pass, CI installs
+Node 22 dependencies, builds the frontend, checks image URL mapping, and
+publishes frontend/dist with the pinned official Wrangler action only on
+push to refs/heads/dev. PR builds and main builds do not publish production.
+The ten-minute frontend timeout bounds each invocation; concurrency cancels
+an obsolete build for the same ref. No additional scheduled job, runner job,
+paid plan or automatic migration is added. CI still consumes shared Actions
+allowance; organization billing controls remain the billing owner's scope.
+This deployment integration does not enable MUSEUM_BACKUP_ENABLED.
+
+The Pages token has only this Cloudflare account's Cloudflare Pages Edit
+permission and is stored as repository Secret CLOUDFLARE_API_TOKEN, with an
+ignored local copy in .env as CLOUDFLARE_PAGES_API_TOKEN. The user explicitly
+authorized both destinations. Cloudflare scopes this permission by account;
+workflow commands target only regional-museum-platform. Rotate/revoke this
+token from Cloudflare's user API Tokens page and replace the repository
+Secret when ownership changes. Never copy it into frontend configuration.
+
+frontend/.env.production contains public build values only: the Render API
+URL and Supabase/R2 public image endpoints. It preserves VITE_USE_MOCKS=true
+and real auth (VITE_AUTH_USE_MOCKS=false) from the previous deployed prototype.
+Switch business screens to real mode only after the team's remaining API
+integration is verified. npm run dev retains its usual local configuration;
+production build variables can be overridden by the invoking environment.
+
+Workflow: open a feature PR into dev, require passing CI, merge, then inspect
+Render Deploys and the CI Deploy existing Cloudflare Pages site step. Verify
+the Pages canonical deployment commit matches the merge SHA and the API
+health endpoints respond. Frontend and backend deploy independently, so use
+backward-compatible API changes. Database migrations remain an explicit
+operator step; deploying code neither migrates nor copies hosted data.
+
+For rollback, redeploy a known good commit in Render and roll back to the
+previous production deployment in Cloudflare Pages. Fix/revert dev as well,
+otherwise a later automatic deployment will reintroduce the bad code.
+For pause, turn Render Auto-Deploy Off and disable/remove only the CI Pages
+publishing step (not the unrelated recovery workflow).
+
+References: [Cloudflare Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/),
+[CI upload integration](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/),
+and [Render automatic deploys](https://render.com/docs/deploys).
