@@ -1,0 +1,30 @@
+.lead { color: var(--c-muted); max-width: 62ch; }
+
+.layout { display: grid; grid-template-columns: 1.6fr 1fr; gap: var(--s-5); align-items: start; }
+.main { display: flex; flex-direction: column; gap: var(--s-5); }
+
+.card { background: var(--c-white); border: 1px solid var(--c-border); border-radius: var(--radius); padding: var(--s-5); }
+.card h2 { font-size: var(--fs-lg); margin: 0 0 var(--s-3); }
+.card p { margin: 0 0 var(--s-3); }
+
+.subheading { font-family: var(--font-body); font-size: 14px; font-weight: 700; margin: var(--s-4) 0 var(--s-1); }
+
+.table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: var(--s-3); }
+.table th, .table td { text-align: left; padding: 8px var(--s-2) 8px 0; border-bottom: 1px solid var(--c-border); vertical-align: top; }
+.table th { font-weight: 600; width: 28%; }
+
+.exceptions { margin: 0 0 var(--s-3); padding-left: var(--s-5); line-height: 1.9; font-size: 14px; }
+
+.facilities { list-style: none; margin: 0 0 var(--s-3); padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--s-3); }
+.facility { border: 1px solid var(--c-border); border-radius: var(--radius); padding: var(--s-3); font-size: 14px; }
+.facilityHead { display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; margin-bottom: var(--s-1); }
+
+.muted { color: var(--c-muted); }
+.hint { font-size: var(--fs-sm); color: var(--c-muted); }
+
+.side { position: sticky; top: var(--s-5); }
+
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; }
+  .side { position: static; order: -1; }
+}

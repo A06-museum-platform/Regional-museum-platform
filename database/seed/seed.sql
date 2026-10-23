@@ -300,45 +300,9 @@ JOIN ticket_type tt ON tt.ticket_type_id = v.ticket_type_id;
 
 
 -- =========================================================
--- 14. Media (placeholder images)
--- Stable picsum.photos images so demos render without a storage bucket.
--- Staff uploads replace them (docs/design/media-storage.md). The primary
--- image is served as image_url / thumbnail_url.
+-- 14. Media
+-- No placeholder photographs: random stock images would put a beach on a
+-- malachite specimen. Cards show a designed gradient per category until
+-- staff upload real images on the Media page (docs/design/media-storage.md).
 -- =========================================================
 
-INSERT INTO media_asset
-(collection_item_id, exhibition_id, event_id, url, media_type, sort_order, is_primary, storage)
-VALUES
-(1, NULL, NULL, 'https://picsum.photos/seed/malachite-matrix-burra/800/600', 'image', 0, TRUE, 'remote'),
-(1, NULL, NULL, 'https://picsum.photos/seed/malachite-matrix-burra-2/800/600', 'image', 1, FALSE, 'remote'),
-(2, NULL, NULL, 'https://picsum.photos/seed/copper-relay-key-overland-telegraph/800/600', 'image', 0, TRUE, 'remote'),
-(2, NULL, NULL, 'https://picsum.photos/seed/copper-relay-key-overland-telegraph-2/800/600', 'image', 1, FALSE, 'remote'),
-(3, NULL, NULL, 'https://picsum.photos/seed/redruth-smelter-wage-ledger/800/600', 'image', 0, TRUE, 'remote'),
-(3, NULL, NULL, 'https://picsum.photos/seed/redruth-smelter-wage-ledger-2/800/600', 'image', 1, FALSE, 'remote'),
-(4, NULL, NULL, 'https://picsum.photos/seed/whaling-crew-encounter-bay/800/600', 'image', 0, TRUE, 'remote'),
-(4, NULL, NULL, 'https://picsum.photos/seed/whaling-crew-encounter-bay-2/800/600', 'image', 1, FALSE, 'remote'),
-(5, NULL, NULL, 'https://picsum.photos/seed/cornish-beam-engine-flywheel-segment/800/600', 'image', 0, TRUE, 'remote'),
-(6, NULL, NULL, 'https://picsum.photos/seed/azurite-nodule-moonta/800/600', 'image', 0, TRUE, 'remote'),
-(7, NULL, NULL, 'https://picsum.photos/seed/morse-sounder-resonator-box/800/600', 'image', 0, TRUE, 'remote'),
-(8, NULL, NULL, 'https://picsum.photos/seed/overland-telegraph-survey-field-book/800/600', 'image', 0, TRUE, 'remote'),
-(9, NULL, NULL, 'https://picsum.photos/seed/narrow-gauge-locomotive-builder-plate/800/600', 'image', 0, TRUE, 'remote'),
-(10, NULL, NULL, 'https://picsum.photos/seed/schoolchildren-burra-open-cut/800/600', 'image', 0, TRUE, 'remote'),
-(11, NULL, NULL, 'https://picsum.photos/seed/ships-chronometer-victor-harbor/800/600', 'image', 0, TRUE, 'remote'),
-(12, NULL, NULL, 'https://picsum.photos/seed/kaurna-language-word-list/800/600', 'image', 0, TRUE, 'remote'),
-(13, NULL, NULL, 'https://picsum.photos/seed/whim-winding-drum-unattributed/800/600', 'image', 0, TRUE, 'remote'),
-(NULL, 1, NULL, 'https://picsum.photos/seed/colonial-mining-overland-telegraph/1200/600', 'image', 0, TRUE, 'remote'),
-(NULL, 2, NULL, 'https://picsum.photos/seed/working-the-monster-mine/1200/600', 'image', 0, TRUE, 'remote'),
-(NULL, 3, NULL, 'https://picsum.photos/seed/whaling-and-the-southern-coast/1200/600', 'image', 0, TRUE, 'remote'),
-(NULL, 4, NULL, 'https://picsum.photos/seed/kaurna-living-waters/1200/600', 'image', 0, TRUE, 'remote'),
-(NULL, 5, NULL, 'https://picsum.photos/seed/narrow-gauge-mid-north/1200/600', 'image', 0, TRUE, 'remote'),
-(NULL, NULL, 1, 'https://picsum.photos/seed/junior-field-detective-telegraph/800/600', 'image', 0, TRUE, 'remote'),
-(NULL, NULL, 2, 'https://picsum.photos/seed/night-at-the-monster-mine/800/600', 'image', 0, TRUE, 'remote'),
-(NULL, NULL, 3, 'https://picsum.photos/seed/cornish-steam-engine-mechanics/800/600', 'image', 0, TRUE, 'remote'),
-(NULL, NULL, 4, 'https://picsum.photos/seed/kaurna-weaving-ethnobotany-walk/800/600', 'image', 0, TRUE, 'remote'),
-(NULL, NULL, 5, 'https://picsum.photos/seed/curators-cabinet-specimen-store/800/600', 'image', 0, TRUE, 'remote'),
-(NULL, NULL, 6, 'https://picsum.photos/seed/fleurieu-whaling-rigging-knotcraft/800/600', 'image', 0, TRUE, 'remote'),
-(NULL, NULL, 7, 'https://picsum.photos/seed/reading-the-wage-ledger/800/600', 'image', 0, TRUE, 'remote'),
-(NULL, NULL, 8, 'https://picsum.photos/seed/narrow-gauge-in-miniature/800/600', 'image', 0, TRUE, 'remote'),
-(NULL, NULL, 9, 'https://picsum.photos/seed/chronometers-longitude-southern-run/800/600', 'image', 0, TRUE, 'remote'),
-(NULL, NULL, 10, 'https://picsum.photos/seed/morse-code-galvanic-batteries/800/600', 'image', 0, TRUE, 'remote'),
-(NULL, NULL, 11, 'https://picsum.photos/seed/summer-twilight-telegraph/800/600', 'image', 0, TRUE, 'remote');

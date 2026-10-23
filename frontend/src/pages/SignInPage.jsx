@@ -8,6 +8,7 @@ import Pill from '../components/Pill';
 import styles from './SignInPage.module.css';
 
 const LANDING_BY_ROLE = {
+  visitor: '/account',
   member: '/account',
   staff: '/staff',
   admin: '/staff',
@@ -86,7 +87,9 @@ export default function SignInPage() {
         </Button>
 
         <p style={{ fontSize: 'var(--fs-sm)', marginTop: 'var(--s-4)', marginBottom: 0 }}>
-          Not a member yet? <Link to="/membership">Join the museum</Link>
+          New here? <Link to="/register" state={location.state}>Create an account</Link>
+          {' · '}
+          <Link to="/membership">About membership</Link>
         </p>
       </div>
 

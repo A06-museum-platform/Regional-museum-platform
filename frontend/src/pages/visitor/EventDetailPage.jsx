@@ -196,6 +196,10 @@ export default function EventDetailPage() {
                       <Link to="/signin" state={{ from: location.pathname }}>
                         <Button fullWidth>Sign in to register</Button>
                       </Link>
+                      <p style={{ fontSize: 'var(--fs-sm)', marginTop: 'var(--s-3)', marginBottom: 0 }}>
+                        No account yet?{' '}
+                        <Link to="/register" state={{ from: location.pathname }}>Create one in a minute</Link>
+                      </p>
                     </>
                   ) : (
                   <>

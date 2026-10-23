@@ -51,12 +51,23 @@ export default function VisitorLayout() {
             ))}
           </nav>
 
-          <input
-            className={styles.search}
-            type="search"
-            placeholder="Search collections"
-            aria-label="Search collections"
-          />
+          <form
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const q = new FormData(event.currentTarget).get('q')?.toString().trim();
+              navigate(q ? `/collections?q=${encodeURIComponent(q)}` : '/collections');
+              setMenuOpen(false);
+            }}
+          >
+            <input
+              className={styles.search}
+              type="search"
+              name="q"
+              placeholder="Search collections"
+              aria-label="Search collections"
+            />
+          </form>
 
           <div className={styles.actions}>
             {isSignedIn ? (
@@ -66,7 +77,7 @@ export default function VisitorLayout() {
                     <Button variant="ghost" size="sm">Workspace</Button>
                   </Link>
                 )}
-                {user.role === 'member' && (
+                {!isStaff && (
                   <Link to="/account">
                     <Button variant="ghost" size="sm">My account</Button>
                   </Link>
