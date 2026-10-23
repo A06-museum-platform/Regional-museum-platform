@@ -25,6 +25,7 @@ from app.api.public.membership_plans import router as membership_plans_router
 from app.api.public.opening_hours import router as opening_hours_router
 from app.api.public.ticket_types import router as ticket_types_router
 from app.api.public.visit_information import router as visitor_information_router
+from app.api.staff.bookings import router as staff_bookings_router
 from app.api.staff.collection_items import router as staff_collection_items_router
 from app.api.staff.events import router as staff_events_router
 from app.api.staff.exhibitions import router as staff_exhibitions_router
@@ -58,6 +59,7 @@ app.include_router(staff_exhibitions_router)
 app.include_router(staff_events_router)
 app.include_router(staff_opening_hours_router)
 app.include_router(staff_visitor_information_router)
+app.include_router(staff_bookings_router)
 app.include_router(admin_users_router)
 app.include_router(admin_memberships_router)
 app.include_router(admin_members_router)

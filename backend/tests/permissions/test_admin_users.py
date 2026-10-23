@@ -66,6 +66,8 @@ class _FakeDB:
         params = params or {}
         if sql.startswith("SELECT COUNT(*)"):
             return _Result(scalar=len(self.users))
+        if sql.startswith("SELECT x.*"):  # filtered listing wraps USER_SELECT
+            return _Result([self._row(uid) for uid in sorted(self.users)])
         if sql.startswith("SELECT u.user_id"):
             if "WHERE u.user_id" in sql:
                 uid = params["user_id"]
@@ -75,6 +77,8 @@ class _FakeDB:
             return _Result(scalar=ROLES.get(params["role"]))
         if sql.startswith("DELETE FROM user_role"):
             return _Result()
+        if sql.startswith("INSERT INTO user_role") and "role_id" not in params:
+            return _Result()  # baseline Visitor / kept Member rows
         if sql.startswith("INSERT INTO user_role"):
             name = {v: k for k, v in ROLES.items()}[params["role_id"]]
             self.users[params["user_id"]][4] = name.capitalize()

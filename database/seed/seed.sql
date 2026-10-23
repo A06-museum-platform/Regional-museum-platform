@@ -279,12 +279,16 @@ VALUES
 ('SARHN-10002', 2, CURRENT_DATE - 24, '09:00', '11:00', 'Ben', 'Wilson', 'ben@example.com', NULL, '{step_free}', 'Reserved', now() - INTERVAL '30 days'),
 ('SARHN-10003', 1, (CURRENT_DATE + 3 + ((8 - EXTRACT(ISODOW FROM CURRENT_DATE + 3)::int) % 7)), '09:00', '11:00', 'Alice', 'Brown', 'alice@example.com', '0400 000 001', '{sensory_backpack}', 'Reserved', now() - INTERVAL '1 day'),
 ('SARHN-10004', 5, (CURRENT_DATE + 10 + ((8 - EXTRACT(ISODOW FROM CURRENT_DATE + 10)::int) % 7)), '13:00', '15:00', 'Priya', 'Sharma', 'priya.sharma@example.com', NULL, '{}', 'Reserved', now() - INTERVAL '3 days'),
-('SARHN-10005', 11, (CURRENT_DATE + 3 + ((8 - EXTRACT(ISODOW FROM CURRENT_DATE + 3)::int) % 7)), '13:00', '15:00', 'Sofia', 'Rossi', 'sofia.rossi@example.com', NULL, '{hearing_loop}', 'Cancelled', now() - INTERVAL '4 days');
+('SARHN-10005', 11, (CURRENT_DATE + 3 + ((8 - EXTRACT(ISODOW FROM CURRENT_DATE + 3)::int) % 7)), '13:00', '15:00', 'Sofia', 'Rossi', 'sofia.rossi@example.com', NULL, '{hearing_loop}', 'Cancelled', now() - INTERVAL '4 days'),
+-- Today's arrivals, for the staff check-in screen.
+('SARHN-10006', 6, CURRENT_DATE, '11:00', '13:00', 'Tom', 'Nguyen', 'tom.nguyen@example.com', '0400 000 006', '{}', 'Reserved', now() - INTERVAL '5 days'),
+('SARHN-10007', 12, CURRENT_DATE, '11:00', '13:00', 'Noah', 'Williams', 'noah.williams@example.com', NULL, '{step_free}', 'Reserved', now() - INTERVAL '2 days'),
+('SARHN-10008', 9, CURRENT_DATE, '13:00', '15:00', 'Mei', 'Chen', 'mei.chen@example.com', NULL, '{}', 'Completed', now() - INTERVAL '6 days');
 
 INSERT INTO ticket_reservation
 (booking_id, user_id, ticket_type_id, visit_date, visit_time, ticket_quantity, unit_price, status)
 SELECT b.booking_id, b.user_id, v.ticket_type_id, b.visit_date, b.window_start, v.quantity, tt.price,
-       CASE WHEN b.status = 'Cancelled' THEN 'Cancelled' ELSE 'Reserved' END
+       CASE WHEN b.status = 'Reserved' THEN 'Reserved' ELSE b.status END
 FROM (VALUES
     ('SARHN-10001', 4, 1),
     ('SARHN-10001', 3, 1),
@@ -293,7 +297,11 @@ FROM (VALUES
     ('SARHN-10003', 3, 2),
     ('SARHN-10004', 4, 4),
     ('SARHN-10005', 1, 1),
-    ('SARHN-10005', 2, 1)
+    ('SARHN-10005', 2, 1),
+    ('SARHN-10006', 4, 1),
+    ('SARHN-10007', 1, 2),
+    ('SARHN-10007', 3, 3),
+    ('SARHN-10008', 4, 4)
 ) AS v(reference, ticket_type_id, quantity)
 JOIN booking b ON b.booking_reference = v.reference
 JOIN ticket_type tt ON tt.ticket_type_id = v.ticket_type_id;

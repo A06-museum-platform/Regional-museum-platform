@@ -291,3 +291,61 @@ export async function cancelBooking(reference, user) {
   }
   return request(`/bookings/${reference}/cancel`, { method: 'POST' });
 }
+
+/* ------------------------------------------------------------------ staff */
+
+/**
+ * Staff booking management (role-permission matrix: "View all bookings and
+ * event registrations"). Contract:
+ *   GET  /staff/bookings?date=&q=        every account's bookings
+ *   GET  /staff/bookings/summary?date=   totals per arrival window
+ *   POST /staff/bookings/{ref}/check-in  visitors arrived
+ *   POST /staff/bookings/{ref}/cancel    cancel on a visitor's behalf
+ *   GET  /staff/today                    "Today at a glance" numbers
+ */
+export async function listStaffBookings({ date = '', q = '' } = {}) {
+  if (USE_MOCKS) {
+    await delay();
+    const items = BOOKINGS.filter((b) => (!date || b.visit_date === date)
+      && (!q || `${b.reference} ${b.visitor.first_name} ${b.visitor.last_name} ${b.visitor.email}`
+        .toLowerCase().includes(q.toLowerCase())));
+    return { items, total: items.length, page: 1, size: 200 };
+  }
+  return request('/staff/bookings', { params: { date, q, size: 200 } });
+}
+
+export async function getBookingSummary(date) {
+  if (USE_MOCKS) {
+    await delay(0);
+    return { date, bookings: 0, tickets: 0, checked_in: 0, windows: [] };
+  }
+  return request('/staff/bookings/summary', { params: { date } });
+}
+
+export async function checkInBooking(reference) {
+  if (USE_MOCKS) {
+    await delay();
+    const booking = BOOKINGS.find((b) => b.reference === reference);
+    booking.checked_in = true;
+    return { ...booking };
+  }
+  return request(`/staff/bookings/${reference}/check-in`, { method: 'POST' });
+}
+
+export async function staffCancelBooking(reference) {
+  if (USE_MOCKS) {
+    await delay();
+    const booking = BOOKINGS.find((b) => b.reference === reference);
+    booking.status = 'cancelled';
+    return { ...booking };
+  }
+  return request(`/staff/bookings/${reference}/cancel`, { method: 'POST' });
+}
+
+export async function getStaffToday() {
+  if (USE_MOCKS) {
+    await delay(0);
+    return null;
+  }
+  return request('/staff/today');
+}

@@ -13,7 +13,6 @@ import RegisterPage from '../pages/RegisterPage';
 import ExhibitionsPage from '../pages/visitor/ExhibitionsPage';
 import ExhibitionDetailPage from '../pages/visitor/ExhibitionDetailPage';
 import VisitPage from '../pages/visitor/VisitPage';
-import PlaceholderPage from '../pages/PlaceholderPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import TicketBookingPage from '../pages/booking/TicketBookingPage';
 import CheckoutPage from '../pages/booking/CheckoutPage';
@@ -27,6 +26,7 @@ import StaffContentPage from '../pages/staff/StaffContentPage';
 import StaffMediaPage from '../pages/staff/StaffMediaPage';
 import OpeningHoursPage from '../pages/staff/OpeningHoursPage';
 import VisitorInfoPage from '../pages/staff/VisitorInfoPage';
+import BookingRegisterPage from '../pages/staff/BookingRegisterPage';
 import MembersPage from '../pages/admin/MembersPage';
 import StaffAccountsPage from '../pages/admin/StaffAccountsPage';
 import ActivityLogPage from '../pages/admin/ActivityLogPage';
@@ -91,7 +91,7 @@ export default function AppRoutes() {
           <Route path="events" element={<StaffEventsPage />} />
           <Route path="hours" element={<OpeningHoursPage />} />
           <Route path="visit" element={<VisitorInfoPage />} />
-          <Route path="bookings" element={<PlaceholderPage title="Bookings & check-in" />} />
+          <Route path="bookings" element={<BookingRegisterPage />} />
         </Route>
       </Route>
 
