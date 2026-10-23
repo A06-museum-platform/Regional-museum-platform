@@ -48,7 +48,12 @@ app.include_router(admin_members_router)
 # try/except that would permanently skip the route): the mount always
 # exists, and LocalStorage creates the directory on first upload, so files
 # uploaded later are served instead of 404ing.
-Path(get_settings().local_upload_dir).mkdir(parents=True, exist_ok=True)
+try:
+    Path(get_settings().local_upload_dir).mkdir(parents=True, exist_ok=True)
+except OSError:
+    # Outside the container (CI, a laptop) /app may not be writable; the
+    # mount still works and LocalStorage reports the problem on upload.
+    pass
 app.mount(
     "/uploads",
     StaticFiles(directory=get_settings().local_upload_dir, check_dir=False),

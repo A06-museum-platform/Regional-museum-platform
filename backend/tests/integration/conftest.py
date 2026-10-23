@@ -79,11 +79,14 @@ def database_available():
 
 
 @pytest.fixture
-def client(database_available, monkeypatch):
+def client(database_available, monkeypatch, tmp_path):
     """A TestClient on a freshly rebuilt and seeded database."""
     asyncio.run(_rebuild())
 
     monkeypatch.setenv("DATABASE_URL", DB_URL)
+    # The container default (/app/uploads) doesn't exist on a CI runner.
+    monkeypatch.setenv("LOCAL_UPLOAD_DIR", str(tmp_path / "uploads"))
+    monkeypatch.setenv("MEDIA_BACKEND", "local")
     from app.core.config import get_settings
     from app.db import session as session_mod
 
