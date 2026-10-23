@@ -253,6 +253,7 @@ def _to_booking(row, lines, today: Optional[date] = None) -> BookingOut:
         ),
         accessibility=list(row.accessibility),
         status=status,
+        checked_in=row.status == "Completed",
         payment=SIMULATED_PAYMENT,
         created_at=row.created_at,
     )
@@ -470,3 +471,53 @@ async def create_booking(db: AsyncSession, user_id: int, body: BookingIn) -> Boo
         await db.rollback()
         raise
     return _to_booking(booking, lines)
+
+async def check_in(db: AsyncSession, reference: str) -> BookingOut:
+    """Staff mark a reserved booking as arrived (status Completed). Only a
+    booking for today or earlier can be checked in, and only once."""
+    booking = await get_booking(db, reference, user_id=0, sees_all=True)
+    clock = await _museum_clock(db)
+    if booking.status == "cancelled":
+        raise ApiError(409, "That booking was cancelled.", "CONFLICT")
+    raw = (await db.execute(text("SELECT status FROM booking WHERE booking_id = :id"),
+                            {"id": booking.id})).scalar_one()
+    if raw == "Completed":
+        raise ApiError(409, "Already checked in.", "ALREADY_CHECKED_IN")
+    if booking.visit_date > clock.today:
+        raise ApiError(409, f"This booking is for {booking.visit_date:%A %d %B}, not today.",
+                       "NOT_TODAY")
+    await db.execute(text("UPDATE booking SET status = 'Completed' WHERE booking_id = :id"),
+                     {"id": booking.id})
+    await db.execute(text("UPDATE ticket_reservation SET status = 'Completed' WHERE booking_id = :id"),
+                     {"id": booking.id})
+    await db.commit()
+    return await get_booking(db, reference, user_id=0, sees_all=True)
+
+
+async def day_summary(db: AsyncSession, visit_date: date) -> dict:
+    """Bookings, tickets and check-ins for one date, overall and per window."""
+    rows = (
+        await db.execute(
+            text("SELECT b.window_start, b.status, COUNT(DISTINCT b.booking_id) AS bookings, "
+                 "COALESCE(SUM(tr.ticket_quantity), 0) AS tickets "
+                 "FROM booking b LEFT JOIN ticket_reservation tr ON tr.booking_id = b.booking_id "
+                 "WHERE b.visit_date = :d AND b.status <> 'Cancelled' "
+                 "GROUP BY b.window_start, b.status ORDER BY b.window_start"),
+            {"d": visit_date},
+        )
+    ).all()
+    windows: dict[str, dict] = {}
+    for r in rows:
+        key = _hhmm(_minutes(r.window_start))
+        w = windows.setdefault(key, {"start": key, "bookings": 0, "tickets": 0, "checked_in": 0})
+        w["bookings"] += r.bookings
+        w["tickets"] += int(r.tickets)
+        if r.status == "Completed":
+            w["checked_in"] += r.bookings
+    return {
+        "date": visit_date,
+        "bookings": sum(w["bookings"] for w in windows.values()),
+        "tickets": sum(w["tickets"] for w in windows.values()),
+        "checked_in": sum(w["checked_in"] for w in windows.values()),
+        "windows": list(windows.values()),
+    }

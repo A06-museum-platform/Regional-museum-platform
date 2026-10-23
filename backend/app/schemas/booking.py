@@ -126,6 +126,8 @@ class BookingOut(BaseModel):
     accessibility: list[str]
     # reserved | cancelled | completed
     status: str
+    # True once staff have checked the visitors in at the front desk.
+    checked_in: bool = False
     payment: PaymentOut
     created_at: datetime.datetime
 

@@ -270,3 +270,12 @@ export async function deleteEvent(id) {
 
   return request(`/staff/events/${id}`, { method: 'DELETE' });
 }
+
+/** Who is registered for one session (staff). */
+export async function listEventRegistrations(eventId) {
+  if (USE_MOCKS) {
+    await delay();
+    return [];
+  }
+  return request(`/staff/events/${eventId}/registrations`);
+}

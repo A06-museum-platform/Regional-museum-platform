@@ -1,6 +1,6 @@
 """Admin user management (Flow 9, docs/api-contract.md section 9).
 
-GET   /api/users       -> paginated {items, total, page, size}
+GET   /api/users?q=&role=staff,admin -> paginated {items, total, page, size}
 PATCH /api/users/{id}  -> body any subset of {role, is_active}; returns
                           the updated user
 
@@ -17,6 +17,8 @@ An admin can't change their own role or disable themselves: one careless
 click would otherwise leave the museum with no administrator.
 """
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,23 +28,39 @@ from app.core.errors import ApiError
 from app.db.session import get_session
 from app.schemas.user import AdminUserOut, UserListOut, UserUpdateIn
 from app.services.auth_service import USER_SELECT, to_admin_user
+from app.services.content_common import like_pattern
 
 router = APIRouter(prefix="/api", tags=["admin-users"])
 
 
 @router.get("/users", response_model=UserListOut)
 async def list_users(
+    q: Optional[str] = None,
+    role: Optional[str] = Query(None, description="comma-separated, e.g. staff,admin"),
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_session),
     _admin: dict = Depends(require_admin),
 ):
-    offset = (page - 1) * size
-    total = (await db.execute(text("SELECT COUNT(*) FROM user_account"))).scalar_one()
+    """Every account, or those with one of the given roles (highest role
+    counts) and/or whose name or email contains q."""
+    clauses, params = [], {}
+    if role:
+        roles = [r.strip().lower() for r in role.split(",") if r.strip()]
+        if not set(roles) <= {"visitor", "member", "staff", "admin"}:
+            raise ApiError(422, "Unknown role filter", "VALIDATION_ERROR")
+        clauses.append("lower(x.role_name) = ANY(:roles)")
+        params["roles"] = roles
+    if q and q.strip():
+        clauses.append("((x.first_name || ' ' || x.last_name) ILIKE :q OR x.email ILIKE :q)")
+        params["q"] = like_pattern(q)
+    where = f"WHERE {' AND '.join(clauses)} " if clauses else ""
+    base = f"FROM ({USER_SELECT}) x {where}"
+    total = (await db.execute(text(f"SELECT COUNT(*) {base}"), params)).scalar_one()
     rows = (
         await db.execute(
-            text(USER_SELECT + "ORDER BY u.user_id LIMIT :limit OFFSET :offset"),
-            {"limit": size, "offset": offset},
+            text(f"SELECT x.* {base}ORDER BY x.user_id LIMIT :limit OFFSET :offset"),
+            {**params, "limit": size, "offset": (page - 1) * size},
         )
     ).all()
     return UserListOut(
@@ -83,6 +101,20 @@ async def update_user(
             text("INSERT INTO user_role (user_id, role_id) VALUES (:user_id, :role_id)"),
             {"user_id": user_id, "role_id": role_id},
         )
+        # Every account is at least a Visitor, and an active membership keeps
+        # its Member role -- taking away a staff role mustn't take that too.
+        await db.execute(
+            text("INSERT INTO user_role (user_id, role_id) SELECT :user_id, role_id FROM role "
+                 "WHERE lower(role_name) = 'visitor' ON CONFLICT DO NOTHING"),
+            {"user_id": user_id},
+        )
+        if body.role in ("visitor", "member"):
+            await db.execute(
+                text("INSERT INTO user_role (user_id, role_id) SELECT :user_id, r.role_id FROM role r "
+                     "WHERE lower(r.role_name) = 'member' AND EXISTS (SELECT 1 FROM membership m "
+                     "WHERE m.user_id = :user_id AND m.status = 'Active') ON CONFLICT DO NOTHING"),
+                {"user_id": user_id},
+            )
 
     if body.is_active is not None:
         await db.execute(

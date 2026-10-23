@@ -117,6 +117,7 @@ def test_owner_sees_their_booking():
         "accessibility": ["step_free"],
         "status": "reserved",
         "payment": {"method": "simulated", "status": "simulated_paid"},
+        "checked_in": False,
         "created_at": "2026-10-21T00:30:00Z",
     }
 

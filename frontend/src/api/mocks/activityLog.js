@@ -78,4 +78,8 @@ export const ACTION_LABELS = {
   'member.applied': 'Membership applied for',
   'booking.created': 'Tickets booked',
   'booking.cancelled': 'Booking cancelled',
+  'booking.checked_in': 'Visitors checked in',
+  'access.disabled': 'Account disabled',
+  'access.restored': 'Account re-enabled',
+  'visitor_info.updated': 'Visitor information updated',
 };

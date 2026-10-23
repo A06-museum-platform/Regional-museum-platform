@@ -182,6 +182,7 @@ def test_creates_booking_with_reference_lines_and_total():
         "accessibility": ["step_free"],
         "status": "reserved",
         "payment": {"method": "simulated", "status": "simulated_paid"},
+        "checked_in": False,
         "created_at": "2026-10-21T00:30:00Z",
     }
     assert db.committed and not db.rolled_back
