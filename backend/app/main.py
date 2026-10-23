@@ -11,11 +11,15 @@ from sqlalchemy import text
 from app.api.admin.members import router as admin_members_router
 from app.api.admin.memberships import router as admin_memberships_router
 from app.api.admin.users import router as admin_users_router
+from app.api.member.bookings import router as member_bookings_router
 from app.api.member.membership import router as member_membership_router
 from app.api.public.auth import router as auth_router
+from app.api.public.bookings import router as public_bookings_router
 from app.api.public.collections import router as collections_router
 from app.api.public.events import router as events_router
 from app.api.public.membership_plans import router as membership_plans_router
+from app.api.public.opening_hours import router as opening_hours_router
+from app.api.public.ticket_types import router as ticket_types_router
 from app.api.staff.media import router as staff_media_router
 from app.core.config import get_settings
 from app.core.errors import ApiError, api_error_handler
@@ -27,6 +31,12 @@ app.include_router(auth_router)
 app.include_router(membership_plans_router)
 app.include_router(collections_router)
 app.include_router(events_router)
+app.include_router(opening_hours_router)
+app.include_router(ticket_types_router)
+# Keep this before any router with GET /api/bookings/{reference}; routes
+# match in order, so "availability" would be read as a booking reference.
+app.include_router(public_bookings_router)
+app.include_router(member_bookings_router)
 app.include_router(member_membership_router)
 app.include_router(staff_media_router)
 app.include_router(admin_users_router)

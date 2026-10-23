@@ -9,6 +9,10 @@ require_staff / require_admin build on it and check the role from the
 database rather than the token's role claim, so an admin changing a
 role or disabling an account takes effect on the next request instead
 of when the token expires. They return {sub, role} like a token payload.
+
+get_optional_user is for public endpoints that show a signed-in caller
+more (GET /api/ticket-types): a token get_current_user would reject
+counts as an anonymous caller there, never a 401.
 """
 
 from typing import Optional
@@ -55,6 +59,19 @@ async def get_current_user(
     if user is None:
         raise ApiError(401, "Invalid or expired token", "AUTH_INVALID")
     return user
+
+
+async def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer),
+    db: AsyncSession = Depends(get_session),
+) -> Optional[UserOut]:
+    """The signed-in user, or None for no token or a rejected one."""
+    if credentials is None:
+        return None
+    try:
+        return await get_current_user(credentials, db)
+    except ApiError:
+        return None
 
 
 async def require_staff(
