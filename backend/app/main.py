@@ -22,11 +22,11 @@ from app.api.public.opening_hours import router as opening_hours_router
 from app.api.public.ticket_types import router as ticket_types_router
 from app.api.staff.media import router as staff_media_router
 from app.core.config import get_settings
-from app.core.errors import ApiError, api_error_handler
+from app.core.errors import install_error_handlers
 from app.db.session import get_session
 
 app = FastAPI(title="Museum Platform API")
-app.add_exception_handler(ApiError, api_error_handler)
+install_error_handlers(app)
 app.include_router(auth_router)
 app.include_router(membership_plans_router)
 app.include_router(collections_router)

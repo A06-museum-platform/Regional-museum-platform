@@ -128,3 +128,10 @@ class BookingOut(BaseModel):
     status: str
     payment: PaymentOut
     created_at: datetime.datetime
+
+
+class BookingListOut(BaseModel):
+    items: list[BookingOut]
+    total: int
+    page: int
+    size: int
