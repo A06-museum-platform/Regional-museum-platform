@@ -1,5 +1,32 @@
 # Decision log
 
+## 2026-10-23 — Data model enrichment, staff content management, activity log
+
+**Status:** accepted.
+
+- **Migration 009 (additive).** Adds the fields the visitor pages and staff
+  editors already used: slugs, accession numbers, categories, galleries
+  (the four named galleries of the locked scope), year ranges, materials,
+  draft/published, event prices and age ranges, registration party size and
+  contact details, `membership.children_covered`, a weekly-hours `note` and a
+  new `opening_hours_override` table for dated exceptions. No existing column
+  was renamed or dropped, so the ERD tables keep their meaning.
+- **Migration 010: `activity_log`.** Written by the backend as a side effect
+  of each action (never by the client), read by administrators.
+- **Events keep museum-local date + times** (`event_date`, `start_time`,
+  `end_time`); the API converts to UTC ISO 8601. A session starts and finishes
+  on the same local day. Status: Draft / Scheduled (= published) / Cancelled /
+  Completed; past published sessions read as completed.
+- **Event registration needs an account** (any role). One active registration
+  per account and event; cancelling frees the places and allows registering
+  again. Capacity can't be lowered below places taken; an event with
+  registrations can't be deleted, only cancelled.
+- **Seed data** now carries the front end's placeholder museum (13 objects,
+  5 exhibitions, 11 events, 12 accounts) with dates relative to the day it is
+  loaded, so a fresh demo always has upcoming sessions and bookings.
+- **Staff endpoints** live under `/api/staff/...` with the role check as a
+  router-level dependency; see `docs/api-contract.md` (to be updated).
+
 ## 2026-10-23 — Integration: real backend by default, one error envelope
 
 **Status:** accepted (Harbor now owns the whole codebase).

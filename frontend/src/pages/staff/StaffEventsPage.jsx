@@ -22,6 +22,13 @@ import styles from './StaffEventsPage.module.css';
  * URL. Staff work through a task in one sitting; a shareable filter state
  * buys nothing here and would put internal filters in browser history.
  */
+const STATUS_PILLS = {
+  published: { tone: 'lime', label: 'Published' },
+  draft: { tone: 'ochre', label: 'Draft' },
+  cancelled: { tone: 'danger', label: 'Cancelled' },
+  completed: { tone: 'grey', label: 'Finished' },
+};
+
 export default function StaffEventsPage() {
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
@@ -30,6 +37,7 @@ export default function StaffEventsPage() {
 
   const [editing, setEditing] = useState(null); // event object, or 'new'
   const [deleting, setDeleting] = useState(null);
+  const [cancelling, setCancelling] = useState(null);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState(null);
   const [pageError, setPageError] = useState(null);
@@ -69,12 +77,10 @@ export default function StaffEventsPage() {
     }
   }
 
-  async function togglePublish(event) {
+  async function changeStatus(event, status) {
     setPageError(null);
     try {
-      await updateEvent(event.id, {
-        status: event.status === 'published' ? 'draft' : 'published',
-      });
+      await updateEvent(event.id, { status });
       reload();
     } catch (err) {
       setPageError(err.message);
@@ -109,6 +115,8 @@ export default function StaffEventsPage() {
             <option value="">All statuses</option>
             <option value="published">Published</option>
             <option value="draft">Draft</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="completed">Finished</option>
           </select>
         </div>
         <div className={`field ${styles.selectField}`}>
@@ -185,23 +193,42 @@ export default function StaffEventsPage() {
                       {event.price_cents === 0 ? 'Free' : formatPrice(event.price_cents)}
                     </td>
                     <td>
-                      {event.status === 'published' ? (
-                        <Pill tone="lime">Published</Pill>
-                      ) : (
-                        <Pill tone="ochre">Draft</Pill>
-                      )}
+                      <Pill tone={STATUS_PILLS[event.status]?.tone ?? 'grey'}>
+                        {STATUS_PILLS[event.status]?.label ?? event.status}
+                      </Pill>
                     </td>
                     <td className={styles.actions}>
-                      <Button size="sm" variant="ghost" onClick={() => togglePublish(event)}>
-                        {event.status === 'published' ? 'Unpublish' : 'Publish'}
-                      </Button>
-                      <Button size="sm" variant="ghost"
-                        onClick={() => { setFormError(null); setEditing(event); }}>
-                        Edit
-                      </Button>
-                      <Button size="sm" variant="danger" onClick={() => setDeleting(event)}>
-                        Delete
-                      </Button>
+                      {event.status === 'draft' && (
+                        <Button size="sm" variant="ghost" onClick={() => changeStatus(event, 'published')}>
+                          Publish
+                        </Button>
+                      )}
+                      {event.status === 'published' && taken === 0 && (
+                        <Button size="sm" variant="ghost" onClick={() => changeStatus(event, 'draft')}>
+                          Unpublish
+                        </Button>
+                      )}
+                      {event.status === 'published' && taken > 0 && (
+                        <Button size="sm" variant="ghost" onClick={() => setCancelling(event)}>
+                          Cancel session
+                        </Button>
+                      )}
+                      {event.status === 'cancelled' && !event.is_past && (
+                        <Button size="sm" variant="ghost" onClick={() => changeStatus(event, 'published')}>
+                          Reinstate
+                        </Button>
+                      )}
+                      {event.status !== 'completed' && (
+                        <Button size="sm" variant="ghost"
+                          onClick={() => { setFormError(null); setEditing(event); }}>
+                          Edit
+                        </Button>
+                      )}
+                      {taken === 0 && (
+                        <Button size="sm" variant="danger" onClick={() => setDeleting(event)}>
+                          Delete
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -218,6 +245,18 @@ export default function StaffEventsPage() {
           error={formError}
           onSave={handleSave}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {cancelling && (
+        <ConfirmDialog
+          title={`Cancel “${cancelling.title}”?`}
+          body={`${cancelling.capacity - cancelling.spots_remaining} people are registered. The session stays on the public listing marked as cancelled, and their registrations are kept on record.`}
+          confirmLabel="Cancel session"
+          cancelLabel="Keep it running"
+          busy={busy}
+          onConfirm={async () => { const target = cancelling; setCancelling(null); await changeStatus(target, 'cancelled'); }}
+          onCancel={() => setCancelling(null)}
         />
       )}
 

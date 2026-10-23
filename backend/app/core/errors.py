@@ -53,7 +53,10 @@ def _field_name(loc) -> str:
 async def validation_error_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
     fields: dict[str, str] = {}
     for error in exc.errors():
-        fields.setdefault(_field_name(error.get("loc", ())), error.get("msg", "Invalid value"))
+        message = error.get("msg", "Invalid value")
+        # Our own model validators raise ValueError; pydantic prefixes it.
+        message = message.removeprefix("Value error, ")
+        fields.setdefault(_field_name(error.get("loc", ())), message)
     first = next(iter(fields.items()), ("request", "Invalid input data"))
     return JSONResponse(
         status_code=422,

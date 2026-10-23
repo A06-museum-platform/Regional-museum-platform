@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import useAsync from '../../hooks/useAsync';
+import { useAuth } from '../../context/AuthContext';
 import { getEvent, registerForEvent } from '../../api/events';
 import { galleryLabel, formatPrice } from '../../api/constants';
 import { formatDate, formatTimeRange } from '../../utils/date';
@@ -19,9 +20,23 @@ function audienceLabel({ age_min, age_max }) {
 export default function EventDetailPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user, ready } = useAuth();
   const { data: event, loading, error, reload } = useAsync(() => getEvent(slug), [slug]);
 
+  // Registering needs an account (the registration is kept against it and
+  // shows on the member's account page); the contact details start as the
+  // account's own and can be changed for whoever is attending.
   const [form, setForm] = useState({ contact_name: '', contact_email: '', party_size: 1 });
+  const [prefilledFor, setPrefilledFor] = useState(null);
+  if (user && prefilledFor !== user.id) {
+    setPrefilledFor(user.id);
+    setForm((prev) => ({
+      ...prev,
+      contact_name: prev.contact_name || user.full_name || '',
+      contact_email: prev.contact_email || user.email || '',
+    }));
+  }
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
@@ -144,7 +159,14 @@ export default function EventDetailPage() {
                   : `${event.spots_remaining} of ${event.capacity} places available`}
               </div>
 
-              {event.is_sold_out ? (
+              {event.status !== 'published' ? (
+                <EmptyState
+                  title={event.status === 'cancelled' ? 'This session has been cancelled' : 'Registration has closed'}
+                  body="Other sessions in the programme may still have places."
+                >
+                  <Link to="/events"><Button size="sm">See other sessions</Button></Link>
+                </EmptyState>
+              ) : event.is_sold_out ? (
                 <EmptyState
                   title="This session is full"
                   body="Other sessions in the same programme may still have places."
@@ -164,6 +186,19 @@ export default function EventDetailPage() {
                   </div>
 
                   {submitError && <div className={styles.errorBox}>{submitError}</div>}
+
+                  {ready && !user ? (
+                    <>
+                      <p style={{ fontSize: 'var(--fs-sm)' }}>
+                        Sign in to register — your place is kept on your account, where you
+                        can also cancel it.
+                      </p>
+                      <Link to="/signin" state={{ from: location.pathname }}>
+                        <Button fullWidth>Sign in to register</Button>
+                      </Link>
+                    </>
+                  ) : (
+                  <>
 
                   <div className="field">
                     <label htmlFor="reg-name">Your name</label>
@@ -194,6 +229,8 @@ export default function EventDetailPage() {
                   <Button fullWidth disabled={!formValid || submitting} onClick={handleRegister}>
                     {submitting ? 'Registering…' : 'Register (simulated)'}
                   </Button>
+                  </>
+                  )}
                 </>
               )}
             </>
