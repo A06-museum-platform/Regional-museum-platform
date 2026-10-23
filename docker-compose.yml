@@ -21,6 +21,8 @@ services:
     build:
       context: .
       dockerfile: infra/Dockerfile.backend
+    # Development: one process that reloads when backend/app changes.
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     env_file: .env
     # Passthrough (not a secret default): lets `MEDIA_BACKEND=r2 ...`
     # flip the active storage backend without editing files. Falls back
