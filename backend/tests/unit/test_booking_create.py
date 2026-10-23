@@ -83,6 +83,8 @@ class _FakeDB:
             return _Result()
         if "AT TIME ZONE" in sql:
             return _Result([_row(today=date(2026, 10, 21), now_time=time(8))])
+        if "FROM opening_hours_override" in sql:
+            return _Result()  # no dated exception: the weekly pattern applies
         if sql.startswith("SELECT oh.open_time"):
             span = HOURS.get(params["day"])
             if span is None:

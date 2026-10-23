@@ -52,6 +52,8 @@ class _FakeDB:
         self.queries.append((sql, params))
         if "AT TIME ZONE" in sql:
             return _Result([_row(today=self.today, now_time=self.now)])
+        if "FROM opening_hours_override" in sql:
+            return _Result()  # no dated exception: the weekly pattern applies
         if sql.startswith("SELECT oh.open_time"):
             if params["day"] not in self.hours:
                 return _Result()

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import useAsync from '../../hooks/useAsync';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
 import { listActivity } from '../../api/activity';
+import { USE_MOCKS } from '../../api/client';
 import { ACTION_LABELS } from '../../api/mocks/activityLog';
 import Pill from '../../components/Pill';
 import Skeleton from '../../components/Skeleton';
@@ -39,16 +40,16 @@ export default function ActivityLogPage() {
         Who did what, and why. Read-only.
       </p>
 
-      <div className={styles.note}>
-        <Pill tone="ochre">Prototype</Pill>
-        <div>
-          In this prototype the log is held in memory and resets when the page
-          reloads. In the built system every row is written server-side by
-          FastAPI, including refused requests carrying an <code>ACC-403</code>{' '}
-          reference — that server-side record, not the refusal screen, is what
-          demonstrates the access control actually works.
+      {USE_MOCKS && (
+        <div className={styles.note}>
+          <Pill tone="ochre">Mock data</Pill>
+          <div>
+            Running without the backend: this log is held in memory and resets
+            when the page reloads. With the API, every row is written server-side
+            as a side effect of the action itself.
+          </div>
         </div>
-      </div>
+      )}
 
       <div className={styles.filters}>
         <div className={`field ${styles.searchField}`}>

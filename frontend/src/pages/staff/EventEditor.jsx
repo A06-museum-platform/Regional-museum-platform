@@ -67,9 +67,10 @@ export default function EventEditor({ event, onSave, onClose, busy, error }) {
 
   const endBeforeStart = Boolean(errors.ends_at);
 
-  // Drafts only need a title; everything else is required to publish.
-  const draftErrors = {};
-  if (errors.title) draftErrors.title = errors.title;
+  // A draft can skip the description, but it still needs a title, its times
+  // and a capacity: the event is stored against a date from the start.
+  const draftErrors = { ...errors };
+  delete draftErrors.description;
 
   const showError = (key) => (attempted ? blocking[key] : null);
 

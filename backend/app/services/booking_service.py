@@ -20,8 +20,8 @@ settled). Places taken are the non-cancelled ticket_reservation quantities
 whose visit_time falls inside a window. Dates are judged in museum-local
 time, read from Postgres so the server's own time zone doesn't matter:
 past dates and dates more than 60 days ahead are closed, and today offers
-only windows that haven't started yet. opening_hours holds the weekly
-pattern only; there are no date overrides (holidays) or notes yet.
+only windows that haven't started yet. A dated exception in
+opening_hours_override (a holiday) wins over the weekly pattern.
 
 Creating a booking checks, in the demo's order: the simulated payment was
 acknowledged; there are 1-10 tickets; each ticket type exists and Member
@@ -182,7 +182,7 @@ async def get_availability(db: AsyncSession, visit_date: date) -> AvailabilityOu
 
     hours = await hours_on(db, visit_date)
     if hours is None or hours.is_closed:
-        return _closed(visit_date)
+        return _closed(visit_date, getattr(hours, "note", "") or "")
 
     opens, closes = _minutes(hours.open_time), _minutes(hours.close_time)
     starts = list(range(opens, closes - WINDOW_MINUTES + 1, WINDOW_MINUTES))

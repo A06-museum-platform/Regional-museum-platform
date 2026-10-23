@@ -5,9 +5,10 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 
-def _next_weekday(weekday: int = 0, min_days: int = 2) -> str:
+def _next_weekday(weekday: int = 1, min_days: int = 2) -> str:
     """The next date (museum-local) on the given weekday (0 = Monday) at
-    least min_days away. Seed opening hours: Mon-Fri 09:00-17:00."""
+    least min_days away. Seed opening hours: Mon-Fri 09:00-17:00. Defaults
+    to Tuesday because the seed's own bookings fall on Mondays."""
     today = datetime.now(ZoneInfo("Australia/Adelaide")).date()
     day = today + timedelta(days=min_days)
     while day.weekday() != weekday:
@@ -44,10 +45,8 @@ def test_book_list_and_cancel_round_trip(client, login):
     assert booking["total_cents"] == 3 * 1500
     assert _places(client, visit)["11:00"] == 57
 
-    mine = client.get("/api/bookings/me", headers=ben).json()
-    assert mine["total"] == 1
-    assert mine["items"][0]["reference"] == booking["reference"]
-    assert mine["items"][0]["lines"][0]["quantity"] == 3
+    mine = {b["reference"]: b for b in client.get("/api/bookings/me", headers=ben).json()["items"]}
+    assert mine[booking["reference"]]["lines"][0]["quantity"] == 3
 
     cancelled = client.post(f"/api/bookings/{booking['reference']}/cancel", headers=ben)
     assert cancelled.status_code == 200
@@ -82,7 +81,7 @@ def test_other_accounts_cannot_see_or_cancel(client, login):
     alice = login("alice@example.com")
     assert client.get(f"/api/bookings/{ref}", headers=alice).status_code == 404
     assert client.post(f"/api/bookings/{ref}/cancel", headers=alice).status_code == 404
-    assert client.get("/api/bookings/me", headers=alice).json()["total"] == 0
+    assert ref not in [b["reference"] for b in client.get("/api/bookings/me", headers=alice).json()["items"]]
 
     staff = login("staff@museum.org")
     assert client.get(f"/api/bookings/{ref}", headers=staff).status_code == 200
