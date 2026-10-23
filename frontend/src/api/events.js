@@ -25,7 +25,8 @@ function withComputed(event) {
   const taken = event.registered_count + extra;
   // registered_count is a mock implementation detail and is not sent by the
   // real API, so strip it here rather than letting pages depend on it.
-  const { registered_count: _ignored, ...rest } = event;
+  const rest = { ...event };
+  delete rest.registered_count;
   return {
     ...rest,
     spots_remaining: Math.max(0, event.capacity - taken),

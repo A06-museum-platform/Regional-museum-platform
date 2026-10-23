@@ -12,34 +12,46 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  *     () => searchCollections({ q }),
  *     [q]
  *   );
+ *
+ * `deps` must be primitives (ids, strings, numbers, booleans): they form the
+ * request key. Loading is derived from that key rather than set inside an
+ * effect, so the render that changes a dependency already reports
+ * loading: true -- a page never sees the previous request's result labelled
+ * as current. `data` keeps the previous result while the next one loads.
+ * Only the latest request's result is kept; slower earlier responses are
+ * dropped.
  */
 export default function useAsync(asyncFn, deps = []) {
-  const [state, setState] = useState({ data: null, loading: true, error: null });
-  const latest = useRef(0);
+  const [nonce, setNonce] = useState(0);
+  const key = `${JSON.stringify(deps)}#${nonce}`;
+  const [result, setResult] = useState({ key: null, data: null, error: null });
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const run = useCallback(asyncFn, deps);
-
-  const execute = useCallback(() => {
-    const requestId = ++latest.current;
-    setState((prev) => ({ ...prev, loading: true, error: null }));
-
-    run()
-      .then((data) => {
-        // Ignore a response that has been superseded — otherwise typing fast
-        // in the search box can render stale results.
-        if (requestId !== latest.current) return;
-        setState({ data, loading: false, error: null });
-      })
-      .catch((error) => {
-        if (requestId !== latest.current) return;
-        setState({ data: null, loading: false, error });
-      });
-  }, [run]);
+  // Always call the newest closure without making it part of the request key.
+  const fnRef = useRef(asyncFn);
+  useEffect(() => {
+    fnRef.current = asyncFn;
+  });
 
   useEffect(() => {
-    execute();
-  }, [execute]);
+    let live = true;
+    Promise.resolve()
+      .then(() => fnRef.current())
+      .then(
+        (data) => live && setResult({ key, data, error: null }),
+        (error) => live && setResult((prev) => ({ key, data: prev.data, error }))
+      );
+    return () => {
+      live = false;
+    };
+  }, [key]);
 
-  return { ...state, reload: execute };
+  const reload = useCallback(() => setNonce((n) => n + 1), []);
+  const loading = result.key !== key;
+
+  return {
+    data: loading || !result.error ? result.data : null,
+    loading,
+    error: loading ? null : result.error,
+    reload,
+  };
 }

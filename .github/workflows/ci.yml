@@ -1,8 +1,8 @@
 name: CI
 
 on:
+  # Every pull request, including ones stacked on another feature branch.
   pull_request:
-    branches: [main, dev]
   push:
     branches: [main, dev]
 
@@ -56,12 +56,15 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+      - name: Unit tests (incl. image fallback URL mapping)
+        working-directory: frontend
+        run: npm test
       - name: Build
         working-directory: frontend
         run: npm run build
-      - name: Check image fallback URL mapping
-        working-directory: frontend
-        run: node --test tests/mediaFallback.test.mjs
       - name: Check production deployment credential
         if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
         env:
