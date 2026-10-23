@@ -1,0 +1,123 @@
+.page { display: flex; flex-direction: column; gap: var(--s-7); }
+
+/* --- hero ---------------------------------------------------------------- */
+.hero {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: var(--s-6);
+  align-items: start;
+}
+
+.kicker {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--c-moss);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 var(--s-2);
+}
+
+.title {
+  font-size: 38px;
+  line-height: 1.15;
+  margin: 0 0 var(--s-4);
+  max-width: 20ch;
+}
+
+.lead { font-size: var(--fs-md); color: var(--c-muted); max-width: 58ch; margin: 0 0 var(--s-5); }
+
+.heroActions { display: flex; gap: var(--s-3); flex-wrap: wrap; }
+
+.statusCard {
+  background: var(--c-white);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: var(--s-5);
+}
+
+.statusRow { display: flex; align-items: center; gap: var(--s-2); font-size: var(--fs-md); }
+
+.dot { width: 10px; height: 10px; border-radius: 99px; background: var(--c-danger); flex: none; }
+.dotOpen { background: var(--c-ok); }
+
+.statusNote { font-size: var(--fs-sm); color: var(--c-muted); margin-top: var(--s-1); }
+
+.hoursTable { width: 100%; border-collapse: collapse; margin: var(--s-4) 0 var(--s-3); font-size: 14px; }
+.hoursTable th, .hoursTable td { padding: 5px 0; border-bottom: 1px solid var(--c-border); text-align: left; }
+.hoursTable th { font-weight: 500; width: 42%; }
+.today th, .today td { font-weight: 700; }
+.exception { color: #7A5510; font-weight: 500; font-size: var(--fs-sm); }
+
+.statusLink { font-size: var(--fs-sm); }
+
+.memberBox {
+  margin-top: var(--s-4);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--c-border);
+  font-size: 14px;
+}
+
+/* --- sections ------------------------------------------------------------ */
+.section { display: flex; flex-direction: column; gap: var(--s-4); }
+
+.sectionHead { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-3); flex-wrap: wrap; }
+.sectionHead h2 { margin: 0; font-size: var(--fs-lg); }
+.sectionHead a { font-size: 14px; }
+
+.muted { color: var(--c-muted); margin: 0; }
+
+.eventGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--s-4); }
+
+.eventCard {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--c-border);
+  border-top: 4px solid var(--c-moss);
+  border-radius: var(--radius);
+  background: var(--c-white);
+  padding: var(--s-4);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 120ms ease;
+}
+.eventCard:hover { border-color: var(--c-moss); }
+
+.eventDate { font-weight: 700; font-size: 14px; }
+.eventTime { font-size: var(--fs-sm); color: var(--c-muted); margin-bottom: var(--s-2); }
+.eventTitle {
+  font-family: var(--font-display);
+  font-size: var(--fs-base);
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0 0 var(--s-2);
+  flex: 1;
+}
+.eventPills { display: flex; gap: var(--s-1); flex-wrap: wrap; margin-bottom: var(--s-2); }
+.eventPrice { font-weight: 600; font-size: 14px; }
+
+.cardGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--s-5); }
+.cardGrid4 { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--s-4); }
+
+/* --- membership band ----------------------------------------------------- */
+.joinBand {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-5);
+  flex-wrap: wrap;
+  background: var(--c-ink);
+  color: var(--c-paper);
+  border-radius: var(--radius);
+  padding: var(--s-6);
+}
+.joinTitle { color: var(--c-lime); margin: 0 0 var(--s-2); font-size: var(--fs-lg); }
+.joinText { margin: 0; color: #CBD2BE; max-width: 60ch; }
+
+/* --- one breakpoint: 768px ----------------------------------------------- */
+@media (max-width: 768px) {
+  .page { gap: var(--s-6); }
+  .hero { grid-template-columns: 1fr; gap: var(--s-5); }
+  .title { font-size: 28px; }
+  .eventGrid, .cardGrid, .cardGrid4 { grid-template-columns: 1fr; }
+  .joinBand { padding: var(--s-5); }
+}

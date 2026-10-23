@@ -22,11 +22,13 @@ from app.api.public.exhibitions import router as exhibitions_router
 from app.api.public.membership_plans import router as membership_plans_router
 from app.api.public.opening_hours import router as opening_hours_router
 from app.api.public.ticket_types import router as ticket_types_router
+from app.api.public.visit_information import router as visitor_information_router
 from app.api.staff.collection_items import router as staff_collection_items_router
 from app.api.staff.events import router as staff_events_router
 from app.api.staff.exhibitions import router as staff_exhibitions_router
 from app.api.staff.media import router as staff_media_router
 from app.api.staff.opening_hours import router as staff_opening_hours_router
+from app.api.staff.visitor_information import router as staff_visitor_information_router
 from app.core.config import get_settings
 from app.core.errors import install_error_handlers
 from app.db.session import get_session
@@ -40,6 +42,7 @@ app.include_router(events_router)
 app.include_router(exhibitions_router)
 app.include_router(opening_hours_router)
 app.include_router(ticket_types_router)
+app.include_router(visitor_information_router)
 # Keep this before any router with GET /api/bookings/{reference}; routes
 # match in order, so "availability" would be read as a booking reference.
 app.include_router(public_bookings_router)
@@ -50,6 +53,7 @@ app.include_router(staff_collection_items_router)
 app.include_router(staff_exhibitions_router)
 app.include_router(staff_events_router)
 app.include_router(staff_opening_hours_router)
+app.include_router(staff_visitor_information_router)
 app.include_router(admin_users_router)
 app.include_router(admin_memberships_router)
 app.include_router(admin_members_router)

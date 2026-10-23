@@ -18,6 +18,7 @@ const STAFF_NAV = [
   { to: '/staff/media', label: 'Media library' },
   { to: '/staff/events', label: 'Events & workshops' },
   { to: '/staff/hours', label: 'Opening hours' },
+  { to: '/staff/visit', label: 'Visitor information' },
   { to: '/staff/bookings', label: 'Bookings & check-in' },
 ];
 

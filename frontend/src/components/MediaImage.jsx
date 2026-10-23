@@ -9,11 +9,13 @@ const standby = {
   r2PublicBase: import.meta.env.VITE_R2_PUBLIC_BASE,
 };
 
-function ImageAttempt({ src, alt = '', ...props }) {
+function ImageAttempt({ src, alt = '', hideOnError = false, ...props }) {
   const [attempt, setAttempt] = useState('primary');
   const primary = resolveMediaUrl(src);
   const fallback = mediaFallbackUrl(primary, standby);
   if (!primary || attempt === 'unavailable') {
+    // Cards keep their own designed placeholder behind the image.
+    if (hideOnError) return null;
     return <span className={styles.placeholder} role="img" aria-label={alt || 'Image unavailable'}>Image unavailable</span>;
   }
   return (

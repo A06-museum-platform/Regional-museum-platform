@@ -9,6 +9,10 @@ import CollectionItemPage from '../pages/visitor/CollectionItemPage';
 import EventsPage from '../pages/visitor/EventsPage';
 import EventDetailPage from '../pages/visitor/EventDetailPage';
 import SignInPage from '../pages/SignInPage';
+import RegisterPage from '../pages/RegisterPage';
+import ExhibitionsPage from '../pages/visitor/ExhibitionsPage';
+import ExhibitionDetailPage from '../pages/visitor/ExhibitionDetailPage';
+import VisitPage from '../pages/visitor/VisitPage';
 import PlaceholderPage from '../pages/PlaceholderPage';
 import NotFoundPage from '../pages/NotFoundPage';
 import TicketBookingPage from '../pages/booking/TicketBookingPage';
@@ -22,6 +26,7 @@ import StaffEventsPage from '../pages/staff/StaffEventsPage';
 import StaffContentPage from '../pages/staff/StaffContentPage';
 import StaffMediaPage from '../pages/staff/StaffMediaPage';
 import OpeningHoursPage from '../pages/staff/OpeningHoursPage';
+import VisitorInfoPage from '../pages/staff/VisitorInfoPage';
 import MembersPage from '../pages/admin/MembersPage';
 import StaffAccountsPage from '../pages/admin/StaffAccountsPage';
 import ActivityLogPage from '../pages/admin/ActivityLogPage';
@@ -45,11 +50,12 @@ export default function AppRoutes() {
       <Route element={<VisitorLayout />}>
         <Route index element={<HomePage />} />
         <Route path="signin" element={<SignInPage />} />
+        <Route path="register" element={<RegisterPage />} />
 
-        <Route path="visit" element={<PlaceholderPage title="Plan your visit" />} />
+        <Route path="visit" element={<VisitPage />} />
 
-        <Route path="exhibitions" element={<PlaceholderPage title="Exhibitions" />} />
-        <Route path="exhibitions/:slug" element={<PlaceholderPage title="Exhibition" />} />
+        <Route path="exhibitions" element={<ExhibitionsPage />} />
+        <Route path="exhibitions/:slug" element={<ExhibitionDetailPage />} />
 
         <Route path="collections" element={<CollectionsPage />} />
         <Route path="collections/:slug" element={<CollectionItemPage />} />
@@ -67,8 +73,9 @@ export default function AppRoutes() {
           <Route path="book/confirmation/:reference" element={<BookingConfirmationPage />} />
         </Route>
 
-        {/* Members only — a staff account has no membership to show. */}
-        <Route element={<RoleGuard allow={['member']} />}>
+        {/* Visitor and member accounts: membership, passes, registrations.
+            A staff account has no membership to show. */}
+        <Route element={<RoleGuard allow={['visitor', 'member']} />}>
           <Route path="account" element={<MembershipStatusPage />} />
         </Route>
 
@@ -83,6 +90,7 @@ export default function AppRoutes() {
           <Route path="media" element={<StaffMediaPage />} />
           <Route path="events" element={<StaffEventsPage />} />
           <Route path="hours" element={<OpeningHoursPage />} />
+          <Route path="visit" element={<VisitorInfoPage />} />
           <Route path="bookings" element={<PlaceholderPage title="Bookings & check-in" />} />
         </Route>
       </Route>
