@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import useAsync from '../../hooks/useAsync';
 import { getOpeningHours, saveOpeningHours, DAY_NAMES } from '../../api/openingHours';
 import Button from '../../components/Button';
@@ -26,11 +26,14 @@ export default function OpeningHoursPage() {
   const [saveError, setSaveError] = useState(null);
   const [savedAt, setSavedAt] = useState(null);
 
-  useEffect(() => {
-    if (!data) return;
+  // Copy the loaded hours into editable state once per load (React's
+  // "adjust state when a prop changes" pattern, not an effect).
+  const [loadedFrom, setLoadedFrom] = useState(null);
+  if (data && loadedFrom !== data) {
+    setLoadedFrom(data);
     setWeekly(data.weekly);
     setOverrides(data.overrides);
-  }, [data]);
+  }
 
   const patch = (setter) => (id, changes) => {
     setter((rows) => rows.map((row) => (row.id === id ? { ...row, ...changes } : row)));

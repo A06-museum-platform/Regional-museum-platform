@@ -53,7 +53,13 @@ docker compose exec db createdb -U museum museum_test
 TEST_DATABASE_URL=postgresql://museum:museum@localhost:5432/museum_test pytest tests
 ```
 
-CI runs both against a `museum_test` service container.
+CI runs both against a `museum_test` service container, plus the front
+end's lint, unit tests and build. The role-permission matrix is tested row
+by row for every role in `backend/tests/integration/test_role_matrix.py`
+(see `docs/role-permission-matrix.md`).
+
+Browser end-to-end checks (Playwright) live in `tests/e2e/` — see its
+README.
 
 ## Demo accounts
 
@@ -79,6 +85,7 @@ Emma (staff) and open an `/admin/...` page such as `/admin/members`.
 | `database/` | Migrations, seed data, ERD and schema notes |
 | `infra/` | Dockerfiles and deployment notes |
 | `tests/load/` | Locust load tests against the 100 / 500 concurrency targets |
+| `tests/e2e/` | Playwright browser checks of every user flow |
 | `docs/` | Requirements, personas, permission matrix, test evidence, reports |
 | `scripts/` | Repeatable setup and seed commands |
 
@@ -96,8 +103,9 @@ unavailable actions for convenience only — it is not a security boundary.
 
 ## Contributing
 
-See `CONTRIBUTING.md`. In short: branch from `main`, small commits,
-open a pull request, one reviewer approval required before merge.
+See `CONTRIBUTING.md`. In short: branch from `dev`, small commits,
+open a pull request into `dev`; CI must pass before merge. `main` holds
+released versions.
 
 ## Out of scope
 

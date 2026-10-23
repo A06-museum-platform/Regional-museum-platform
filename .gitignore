@@ -44,3 +44,4 @@ tests/load/results/*.csv
 
 # Private cloud mirror credentials
 rclone.conf
+tests/e2e/screenshots/

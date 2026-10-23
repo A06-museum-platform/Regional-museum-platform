@@ -83,7 +83,7 @@ export async function request(path, { method = 'GET', params, body } = {}) {
 
   if (response.status === 204) return null;
 
-  let payload = null;
+  let payload;
   try {
     payload = await response.json();
   } catch {
