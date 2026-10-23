@@ -16,4 +16,10 @@ COPY backend/app ./app
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Production: several worker processes, no auto-reload (load-tested this way,
+# docs/load-testing.md). WEB_CONCURRENCY sets the worker count; PORT is set by
+# hosts such as Render. Keep-alive outlasts a visitor reading a page, so their
+# next click reuses the connection. docker-compose.yml overrides this with --reload for
+# local development.
+ENV WEB_CONCURRENCY=2 PORT=8000
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --workers ${WEB_CONCURRENCY} --timeout-keep-alive 75 --no-access-log"]

@@ -1,0 +1,5 @@
+2026-11-04 09:00: 40 simultaneous attempts of 2 tickets
+  201 created: 30
+  400 INSUFFICIENT_TICKETS: 10
+  places left afterwards: 0 (of 60)
+PASS
