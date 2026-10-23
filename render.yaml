@@ -7,7 +7,8 @@ services:
     plan: free
     region: singapore
     rootDir: backend
-    autoDeployTrigger: off
+    branch: dev
+    autoDeployTrigger: commit
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
