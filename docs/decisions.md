@@ -1,5 +1,28 @@
 # Decision log
 
+## 2026-10-23 — Integration: real backend by default, one error envelope
+
+**Status:** accepted (Harbor now owns the whole codebase).
+
+- **Migration 008 restored.** PR #21 merged `booking_service.py` but not
+  `database/migrations/008_booking.sql` or its tests (they were on
+  `backend/bookings/ray`), so `POST /api/bookings` failed on a fresh database.
+  Both are now on `dev`.
+- **Booking amendment accepted as implemented.** `GET /api/bookings/me` and
+  `POST /api/bookings/{reference}/cancel` added; cancelling frees the places.
+- **Paths and shapes follow the working front end, not the frozen contract**
+  where the two disagree and the front end is already built
+  (`/collection-items`, slugs, `page_size`). `docs/api-contract.md` will be updated
+  to match the code, not the other way round.
+- **Error envelope.** Every error is `{detail, code}`; validation errors add
+  `fields` and stay `422`. The front end's `client.js` reads this shape (it
+  previously read `{error: {code, message}}`, so real error messages showed as
+  "Something went wrong").
+- **Mocks off by default.** `VITE_USE_MOCKS` defaults to `false`; mocks remain
+  for UI work without a backend.
+- **Integration tests** in `backend/tests/integration/` run against a real
+  `*_test` database rebuilt from the migrations and seed for every test.
+
 ## 2026-10-11 — Booking and membership: front end built against mocks, contract amendment proposed
 
 **Status:** proposed — needs G2 sign-off (Ray/Harbor/Rock) before the

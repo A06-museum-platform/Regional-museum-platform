@@ -274,18 +274,87 @@ async def get_booking(db: AsyncSession, reference: str, user_id: int, sees_all: 
     ).first()
     if row is None or (row.user_id != user_id and not sees_all):
         raise ApiError(404, "We could not find that booking.", "NOT_FOUND")
-    lines = (
+    lines = (await _lines_for(db, [row.booking_id])).get(row.booking_id, [])
+    clock = await _museum_clock(db)
+    return _to_booking(row, lines, today=clock.today)
+
+
+async def _lines_for(db: AsyncSession, booking_ids: list[int]) -> dict[int, list]:
+    """Ticket lines for several bookings in one query, keyed by booking_id."""
+    if not booking_ids:
+        return {}
+    rows = (
         await db.execute(
-            text("SELECT tr.ticket_type_id, tt.ticket_name, tr.ticket_quantity, "
+            text("SELECT tr.booking_id, tr.ticket_type_id, tt.ticket_name, tr.ticket_quantity, "
                  "COALESCE(tr.unit_price, tt.price) AS unit_price "
                  "FROM ticket_reservation tr "
                  "JOIN ticket_type tt ON tt.ticket_type_id = tr.ticket_type_id "
-                 "WHERE tr.booking_id = :booking_id ORDER BY tr.reservation_id"),
-            {"booking_id": row.booking_id},
+                 "WHERE tr.booking_id = ANY(:ids) ORDER BY tr.reservation_id"),
+            {"ids": booking_ids},
         )
     ).all()
+    grouped: dict[int, list] = {}
+    for line in rows:
+        grouped.setdefault(line.booking_id, []).append(line)
+    return grouped
+
+
+async def list_bookings(
+    db: AsyncSession,
+    *,
+    user_id: Optional[int],
+    page: int,
+    size: int,
+    visit_date: Optional[date] = None,
+    q: Optional[str] = None,
+) -> tuple[list[BookingOut], int]:
+    """Bookings newest visit first. user_id limits them to one account (the
+    member's own list); None lists every account's (staff). visit_date and q
+    (reference, visitor name or email) narrow the staff list."""
+    clauses, params = [], {}
+    if user_id is not None:
+        clauses.append("user_id = :user_id")
+        params["user_id"] = user_id
+    if visit_date is not None:
+        clauses.append("visit_date = :visit_date")
+        params["visit_date"] = visit_date
+    if q and q.strip():
+        needle = re.sub(r"([\\%_])", r"\\\1", q.strip())
+        clauses.append("(booking_reference ILIKE :q OR visitor_email ILIKE :q "
+                       "OR (visitor_first_name || ' ' || visitor_last_name) ILIKE :q)")
+        params["q"] = f"%{needle}%"
+    where = f"WHERE {' AND '.join(clauses)} " if clauses else ""
+
+    total = (await db.execute(text(f"SELECT COUNT(*) FROM booking {where}"), params)).scalar_one()
+    rows = (
+        await db.execute(
+            text(f"SELECT {_BOOKING_COLUMNS} FROM booking {where}"
+                 "ORDER BY visit_date DESC, window_start DESC, booking_id DESC "
+                 "LIMIT :limit OFFSET :offset"),
+            {**params, "limit": size, "offset": (page - 1) * size},
+        )
+    ).all()
+    lines = await _lines_for(db, [row.booking_id for row in rows])
     clock = await _museum_clock(db)
-    return _to_booking(row, lines, today=clock.today)
+    return [_to_booking(row, lines.get(row.booking_id, []), today=clock.today) for row in rows], total
+
+
+async def cancel_booking(db: AsyncSession, reference: str, user_id: int, sees_all: bool) -> BookingOut:
+    """Cancel an upcoming booking. Only a reserved booking whose visit date
+    hasn't passed can be cancelled; its places go back on offer because
+    availability skips cancelled reservations."""
+    booking = await get_booking(db, reference, user_id, sees_all)
+    if booking.status != "reserved":
+        raise ApiError(409, "Only an upcoming booking can be cancelled.", "CONFLICT")
+    await db.execute(
+        text("UPDATE booking SET status = 'Cancelled' WHERE booking_id = :id"), {"id": booking.id}
+    )
+    await db.execute(
+        text("UPDATE ticket_reservation SET status = 'Cancelled' WHERE booking_id = :id"),
+        {"id": booking.id},
+    )
+    await db.commit()
+    return booking.model_copy(update={"status": "cancelled"})
 
 
 async def _insert_booking(db: AsyncSession, user_id: int, body: BookingIn, start: int):

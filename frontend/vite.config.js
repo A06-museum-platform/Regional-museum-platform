@@ -1,6 +1,11 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
+// Where the dev server forwards /api and /uploads. Inside docker compose the
+// backend container is reachable as "backend"; running `npm run dev` on the
+// host, set API_PROXY_TARGET=http://localhost:8000.
+const apiTarget = process.env.API_PROXY_TARGET || 'http://backend:8000'
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
@@ -9,12 +14,12 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://backend:8000',
+        target: apiTarget,
         changeOrigin: true,
       },
       // Local-fallback uploads served by FastAPI StaticFiles (MEDIA_BACKEND=local).
       '/uploads': {
-        target: 'http://backend:8000',
+        target: apiTarget,
         changeOrigin: true,
       },
     },

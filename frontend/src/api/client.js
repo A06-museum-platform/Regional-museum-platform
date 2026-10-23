@@ -19,7 +19,7 @@ export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
 
 /**
  * Mirrors the error shape in the API contract:
- *   { error: { code, message, reference } }
+ *   { detail, code }            (plus `fields` on a 422 validation error)
  *
  * `status` matters as much as `code`:
  *   401 — not signed in, or the token expired  -> send them to sign in
@@ -91,12 +91,16 @@ export async function request(path, { method = 'GET', params, body } = {}) {
   }
 
   if (!response.ok) {
+    // The backend sends the contract's { detail, code } (plus `fields` on a
+    // validation error). The older { error: { code, message } } envelope is
+    // still read so the mock modules and any cached response keep working.
+    const legacy = payload?.error;
     throw new ApiError({
       status: response.status,
-      code: payload?.error?.code ?? 'UNKNOWN',
-      message: payload?.error?.message,
-      reference: payload?.error?.reference,
-      fields: payload?.error?.fields,
+      code: payload?.code ?? legacy?.code ?? 'UNKNOWN',
+      message: typeof payload?.detail === 'string' ? payload.detail : legacy?.message,
+      reference: legacy?.reference,
+      fields: payload?.fields ?? legacy?.fields,
     });
   }
 

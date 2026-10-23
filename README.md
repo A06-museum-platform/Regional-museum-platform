@@ -36,6 +36,25 @@ Migrations can be rerun safely; load the seed data only once on a fresh database
 checks database readiness with a two-second timeout and returns 503 if the
 database is unavailable.
 
+## Running the tests
+
+```bash
+cd backend
+pytest tests                      # unit + permission tests, no database needed
+```
+
+`tests/integration/` runs the API against a real PostgreSQL database that it
+rebuilds from `database/migrations` and `database/seed/seed.sql` before every
+test. It only ever touches a database whose name ends in `_test` and is
+skipped when none is reachable:
+
+```bash
+docker compose exec db createdb -U museum museum_test
+TEST_DATABASE_URL=postgresql://museum:museum@localhost:5432/museum_test pytest tests
+```
+
+CI runs both against a `museum_test` service container.
+
 ## Demo accounts
 
 `database/seed/seed.sql` creates one account per role. The passwords are
