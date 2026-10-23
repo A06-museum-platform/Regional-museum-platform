@@ -52,6 +52,8 @@ def _membership(plan="Individual", status="Active"):
         "membership_type": plan, "application_date": date(2026, 7, 1),
         "start_date": date(2026, 7, 2),
         "expiry_date": date.today() + timedelta(days=200), "status": status,
+        # Family and Patron plans cover 2 adults; these members registered 3 children.
+        "children_covered": 3 if plan in ("Family", "Patron") else 0,
     }
 
 
@@ -83,6 +85,8 @@ class _FakeDB:
             return _Result()
         if "AT TIME ZONE" in sql:
             return _Result([_row(today=date(2026, 10, 21), now_time=time(8))])
+        if "FROM opening_hours_override" in sql:
+            return _Result()  # no dated exception: the weekly pattern applies
         if sql.startswith("SELECT oh.open_time"):
             span = HOURS.get(params["day"])
             if span is None:

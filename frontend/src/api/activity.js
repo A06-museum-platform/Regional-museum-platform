@@ -29,6 +29,16 @@ export async function listActivity({ q = '', action = '' } = {}) {
   return request('/admin/activity-log', { params: { q, action } });
 }
 
+/** The signed-in account's own activity: what they did, and decisions
+ *  about them (an approval). Contract: GET /activity/me */
+export async function listMyActivity({ size = 10 } = {}) {
+  if (USE_MOCKS) {
+    await delay();
+    return { items: [], total: 0, page: 1, size };
+  }
+  return request('/activity/me', { params: { size } });
+}
+
 /** Mock-only. In production the server writes this row, not the browser. */
 export function recordLocally({ actor, action, target, reason = null, reference = null }) {
   if (!USE_MOCKS) return;

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { login as apiLogin, logout as apiLogout, me } from '../api/auth';
+import { login as apiLogin, logout as apiLogout, register as apiRegister, me } from '../api/auth';
 
 const AuthContext = createContext(null);
 
@@ -27,6 +27,19 @@ export function AuthProvider({ children }) {
     return signedIn;
   }, []);
 
+  const signUp = useCallback(async (details) => {
+    const { user: created } = await apiRegister(details);
+    setUser(created);
+    return created;
+  }, []);
+
+  /** Re-read the account, e.g. after a membership approval changes the role. */
+  const refresh = useCallback(async () => {
+    const current = await me();
+    setUser(current);
+    return current;
+  }, []);
+
   const signOut = useCallback(() => {
     apiLogout();
     setUser(null);
@@ -36,7 +49,9 @@ export function AuthProvider({ children }) {
     user,
     ready,
     signIn,
+    signUp,
     signOut,
+    refresh,
     isSignedIn: Boolean(user),
     isStaff: user?.role === 'staff' || user?.role === 'admin',
     isAdmin: user?.role === 'admin',

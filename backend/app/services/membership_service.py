@@ -10,8 +10,8 @@ once the schema question is settled.
 An application inserts a 'Pending' membership row. An admin approves it
 ('Active', starting today for the plan's duration, and the applicant gains
 the Member role) or rejects it ('Rejected').
-membership has no children_covered column (schema question 3), so the
-requested number of children is validated and echoed back but not stored.
+membership.children_covered (migration 009, schema question 3) stores how
+many children the membership covers; adults come from the plan.
 """
 
 import re
@@ -96,7 +96,7 @@ _STATUS = {
 
 _MEMBERSHIP_SELECT = (
     "SELECT m.membership_id, m.user_id, m.membership_type, m.application_date, "
-    " m.start_date, m.expiry_date, m.status, "
+    " m.start_date, m.expiry_date, m.status, m.children_covered, "
     " u.email, u.first_name, u.last_name "
     "FROM membership m JOIN user_account u ON u.user_id = m.user_id "
 )
@@ -109,7 +109,7 @@ def _status(row) -> str:
     return status
 
 
-def _to_membership(row, children_covered: Optional[int] = None) -> MembershipOut:
+def _to_membership(row) -> MembershipOut:
     plan = _plan_by_name(row.membership_type)
     return MembershipOut(
         id=row.membership_id,
@@ -122,7 +122,7 @@ def _to_membership(row, children_covered: Optional[int] = None) -> MembershipOut
         plan=MembershipPlanRef(id=plan.id, display_name=plan.display_name) if plan else None,
         status=_status(row),
         adults_covered=plan.adults_covered if plan else None,
-        children_covered=children_covered,
+        children_covered=getattr(row, "children_covered", 0) or 0,
         applied_at=row.application_date,
         approved_at=row.start_date,
         expires_at=row.expiry_date,
@@ -178,11 +178,12 @@ async def apply(
     membership_id = (
         await db.execute(
             text(
-                "INSERT INTO membership (user_id, membership_type, status) "
-                "VALUES (:user_id, :membership_type, 'Pending') "
+                "INSERT INTO membership (user_id, membership_type, status, children_covered) "
+                "VALUES (:user_id, :membership_type, 'Pending', :children) "
                 "RETURNING membership_id"
             ),
-            {"user_id": user_id, "membership_type": plan.display_name},
+            {"user_id": user_id, "membership_type": plan.display_name,
+             "children": body.children_covered},
         )
     ).scalar_one()
     row = (
@@ -192,7 +193,7 @@ async def apply(
         )
     ).first()
     await db.commit()
-    return _to_membership(row, children_covered=body.children_covered)
+    return _to_membership(row)
 
 
 # Filter values (the API's status vocabulary) -> SQL on membership m.

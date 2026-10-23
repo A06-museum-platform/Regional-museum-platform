@@ -91,4 +91,12 @@ async def update_user(
         )
 
     await db.commit()
-    return to_admin_user(await _load(db, user_id))
+    updated = to_admin_user(await _load(db, user_id))
+    from app.services import activity_service
+    if body.role is not None:
+        await activity_service.record(db, admin, "role.changed", f"{updated.email} → {body.role}",
+                                      subject_user_id=user_id)
+    if body.is_active is not None:
+        await activity_service.record(db, admin, "access.restored" if body.is_active else "access.disabled",
+                                      updated.email, subject_user_id=user_id)
+    return updated

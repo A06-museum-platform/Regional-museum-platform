@@ -8,19 +8,29 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
+from app.api.admin.activity import router as admin_activity_router
 from app.api.admin.members import router as admin_members_router
 from app.api.admin.memberships import router as admin_memberships_router
 from app.api.admin.users import router as admin_users_router
+from app.api.member.activity import router as member_activity_router
 from app.api.member.bookings import router as member_bookings_router
 from app.api.member.membership import router as member_membership_router
+from app.api.member.recommendations import router as recommendations_router
 from app.api.public.auth import router as auth_router
 from app.api.public.bookings import router as public_bookings_router
 from app.api.public.collections import router as collections_router
 from app.api.public.events import router as events_router
+from app.api.public.exhibitions import router as exhibitions_router
 from app.api.public.membership_plans import router as membership_plans_router
 from app.api.public.opening_hours import router as opening_hours_router
 from app.api.public.ticket_types import router as ticket_types_router
+from app.api.public.visit_information import router as visitor_information_router
+from app.api.staff.collection_items import router as staff_collection_items_router
+from app.api.staff.events import router as staff_events_router
+from app.api.staff.exhibitions import router as staff_exhibitions_router
 from app.api.staff.media import router as staff_media_router
+from app.api.staff.opening_hours import router as staff_opening_hours_router
+from app.api.staff.visitor_information import router as staff_visitor_information_router
 from app.core.config import get_settings
 from app.core.errors import install_error_handlers
 from app.db.session import get_session
@@ -31,17 +41,27 @@ app.include_router(auth_router)
 app.include_router(membership_plans_router)
 app.include_router(collections_router)
 app.include_router(events_router)
+app.include_router(exhibitions_router)
 app.include_router(opening_hours_router)
 app.include_router(ticket_types_router)
+app.include_router(visitor_information_router)
 # Keep this before any router with GET /api/bookings/{reference}; routes
 # match in order, so "availability" would be read as a booking reference.
 app.include_router(public_bookings_router)
 app.include_router(member_bookings_router)
 app.include_router(member_membership_router)
+app.include_router(member_activity_router)
+app.include_router(recommendations_router)
 app.include_router(staff_media_router)
+app.include_router(staff_collection_items_router)
+app.include_router(staff_exhibitions_router)
+app.include_router(staff_events_router)
+app.include_router(staff_opening_hours_router)
+app.include_router(staff_visitor_information_router)
 app.include_router(admin_users_router)
 app.include_router(admin_memberships_router)
 app.include_router(admin_members_router)
+app.include_router(admin_activity_router)
 
 # Local-fallback file serving (MEDIA_BACKEND=local). The directory lives
 # on the uploads-data docker volume. check_dir=False (rather than a

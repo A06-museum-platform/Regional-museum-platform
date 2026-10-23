@@ -9,9 +9,7 @@ sends integer cents (price_cents), so the front end never handles decimals.
 ticket_type has no members-only column yet, so the Member ticket is found
 by name (ticket_name is UNIQUE). It is offered only to a caller with an
 active membership, up to the number of people that membership covers.
-membership has no children_covered column (schema question 3), so the
-plan's max_children stands in for the children the member registered.
-Replace both stand-ins once the schema has the columns.
+The limit is the plan's adults plus the membership's children_covered.
 
 Availability splits a day's opening hours into two-hour arrival windows,
 laid end to end from opening time while a whole window fits before
@@ -20,8 +18,8 @@ settled). Places taken are the non-cancelled ticket_reservation quantities
 whose visit_time falls inside a window. Dates are judged in museum-local
 time, read from Postgres so the server's own time zone doesn't matter:
 past dates and dates more than 60 days ahead are closed, and today offers
-only windows that haven't started yet. opening_hours holds the weekly
-pattern only; there are no date overrides (holidays) or notes yet.
+only windows that haven't started yet. A dated exception in
+opening_hours_override (a holiday) wins over the weekly pattern.
 
 Creating a booking checks, in the demo's order: the simulated payment was
 acknowledged; there are 1-10 tickets; each ticket type exists and Member
@@ -60,7 +58,7 @@ from app.schemas.booking import (
     VisitorOut,
 )
 from app.services.event_service import MUSEUM_TIMEZONE
-from app.services.membership_service import MEMBERSHIP_PLANS, current_membership
+from app.services.membership_service import current_membership
 from app.services.opening_hours_service import hours_on
 
 # Compared case-insensitively with ticket_type.ticket_name.
@@ -110,15 +108,13 @@ def _is_member_ticket(row) -> bool:
 
 
 async def _member_ticket_limit(db: AsyncSession, user_id: int) -> Optional[int]:
-    """How many Member tickets the user may hold in one booking, or None
-    without an active membership."""
+    """How many Member tickets the user may hold in one booking -- everyone
+    the membership covers -- or None without an active membership."""
     membership = await current_membership(db, user_id)
     if membership is None or membership.status != "active":
         return None
-    plan = next((p for p in MEMBERSHIP_PLANS if p.id == membership.plan_id), None)
-    if plan is None:
-        return 1  # a membership type with no matching plan still covers its holder
-    return plan.adults_covered + plan.max_children
+    adults = membership.adults_covered or 1
+    return adults + (membership.children_covered or 0)
 
 
 async def list_ticket_types(
@@ -182,7 +178,7 @@ async def get_availability(db: AsyncSession, visit_date: date) -> AvailabilityOu
 
     hours = await hours_on(db, visit_date)
     if hours is None or hours.is_closed:
-        return _closed(visit_date)
+        return _closed(visit_date, getattr(hours, "note", "") or "")
 
     opens, closes = _minutes(hours.open_time), _minutes(hours.close_time)
     starts = list(range(opens, closes - WINDOW_MINUTES + 1, WINDOW_MINUTES))

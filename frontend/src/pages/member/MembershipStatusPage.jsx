@@ -10,6 +10,9 @@ import EmptyState from '../../components/EmptyState';
 import Skeleton from '../../components/Skeleton';
 import Button from '../../components/Button';
 import Pill from '../../components/Pill';
+import RecommendationsPanel from '../../components/member/RecommendationsPanel';
+import RegistrationsPanel from '../../components/member/RegistrationsPanel';
+import ActivityPanel from '../../components/member/ActivityPanel';
 import styles from './MembershipStatusPage.module.css';
 
 const BOOKING_PILL = {
@@ -45,8 +48,10 @@ function BookingRow({ booking }) {
 }
 
 /**
- * Member portal: the member's own membership and bookings.
- * Route is member-only — a staff account has no membership to show.
+ * Member portal (client requirement 3(iv): membership status, last activity
+ * and recommendations): membership, visits, workshop registrations,
+ * recommendations and recent activity. Open to visitor and member accounts;
+ * a staff account has no membership to show.
  */
 export default function MembershipStatusPage() {
   const { user } = useAuth();
@@ -63,7 +68,7 @@ export default function MembershipStatusPage() {
   return (
     <div>
       <h1>Hello, {user.full_name.split(' ')[0]}</h1>
-      <p style={{ color: 'var(--c-muted)' }}>Your membership and visits, in one place.</p>
+      <p style={{ color: 'var(--c-muted)' }}>Your membership, visits and workshops, in one place.</p>
 
       <div className={styles.layout}>
         <section aria-labelledby="membership-heading">
@@ -115,6 +120,13 @@ export default function MembershipStatusPage() {
             </>
           )}
         </section>
+      </div>
+
+      <RecommendationsPanel isMember={user.role === 'member'} />
+
+      <div className={styles.layout}>
+        <RegistrationsPanel />
+        <ActivityPanel />
       </div>
     </div>
   );

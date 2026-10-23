@@ -68,6 +68,7 @@ class _FakeDB:
                 "membership_type": params["membership_type"],
                 "application_date": date.today(), "start_date": None,
                 "expiry_date": None, "status": "Pending",
+                "children_covered": params.get("children", 0),
             }
             return _Result(scalar=mid)
         raise AssertionError(f"unexpected SQL: {sql}")

@@ -135,6 +135,24 @@ export async function registerForEvent(slug, { contact_name, contact_email, part
   });
 }
 
+/** The signed-in account's event registrations, newest session first. */
+export async function listMyRegistrations() {
+  if (USE_MOCKS) {
+    await delay();
+    return { items: [], total: 0, page: 1, size: 50 };
+  }
+  return request('/event-registrations/me');
+}
+
+/** Cancel an upcoming registration; frees the places. */
+export async function cancelRegistration(reference) {
+  if (USE_MOCKS) {
+    await delay();
+    return { reference, status: 'cancelled' };
+  }
+  return request(`/event-registrations/${reference}/cancel`, { method: 'POST' });
+}
+
 /* ==========================================================================
    Staff-side operations.
 

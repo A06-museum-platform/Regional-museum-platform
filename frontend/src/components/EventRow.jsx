@@ -13,6 +13,8 @@ function audienceLabel({ age_min, age_max }) {
 
 export default function EventRow({ event }) {
   const suitsFamilies = (event.age_min ?? 0) <= 14 && (event.age_max ?? 99) >= 10;
+  // Only a published, upcoming session with places takes registrations.
+  const open = event.status === 'published' && !event.is_sold_out;
 
   return (
     <article className={styles.row}>
@@ -26,7 +28,11 @@ export default function EventRow({ event }) {
         <div className={styles.pills}>
           <Pill tone={suitsFamilies ? 'lime' : 'grey'}>{audienceLabel(event)}</Pill>
           <Pill>{galleryLabel(event.gallery)}</Pill>
-          {event.is_sold_out ? (
+          {event.status === 'cancelled' ? (
+            <Pill tone="danger">Cancelled</Pill>
+          ) : event.status === 'completed' ? (
+            <Pill>Finished</Pill>
+          ) : event.is_sold_out ? (
             <Pill tone="danger">Fully booked</Pill>
           ) : (
             event.spots_remaining <= 5 && (
@@ -54,8 +60,8 @@ export default function EventRow({ event }) {
           </div>
         )}
         <Link to={`/events/${event.slug}`}>
-          <Button size="sm" variant={event.is_sold_out ? 'ghost' : 'primary'}>
-            {event.is_sold_out ? 'View details' : 'Register'}
+          <Button size="sm" variant={open ? 'primary' : 'ghost'}>
+            {open ? 'Register' : 'View details'}
           </Button>
         </Link>
       </div>

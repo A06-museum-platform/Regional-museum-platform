@@ -84,6 +84,24 @@ export async function me() {
   }
 }
 
+/**
+ * Create a visitor account, then sign straight in with it. A new account is
+ * a Visitor; it becomes a Member when an administrator approves a
+ * membership application.
+ */
+export async function register({ first_name, last_name, email, password }) {
+  if (USE_AUTH_MOCKS) {
+    await delay();
+    throw new ApiError({
+      status: 501,
+      code: 'NOT_AVAILABLE',
+      message: 'Creating accounts needs the backend. Use one of the demonstration accounts.',
+    });
+  }
+  await request('/auth/register', { method: 'POST', body: { first_name, last_name, email, password } });
+  return login(email, password);
+}
+
 export function logout() {
   clearToken();
 }

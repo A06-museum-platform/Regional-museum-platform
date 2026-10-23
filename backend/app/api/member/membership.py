@@ -17,6 +17,7 @@ from app.core.errors import ApiError
 from app.db.session import get_session
 from app.schemas.membership import MembershipApplicationIn, MembershipOut
 from app.schemas.user import UserOut
+from app.services import activity_service
 from app.services.membership_service import apply, current_membership
 
 router = APIRouter(prefix="/api", tags=["membership"])
@@ -45,4 +46,8 @@ async def apply_for_membership(
         raise ApiError(
             403, "Staff and administrator accounts cannot hold a membership", "FORBIDDEN"
         )
-    return await apply(db, user.id, body)
+    record = await apply(db, user.id, body)
+    await activity_service.record(db, user, "member.applied",
+                                  f"{record.plan.display_name if record.plan else record.tier} membership",
+                                  reference=record.member_ref)
+    return record
