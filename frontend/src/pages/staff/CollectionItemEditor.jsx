@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import Modal from '../../components/Modal';
+import InterestPicker from '../../components/member/InterestPicker';
+import useAsync from '../../hooks/useAsync';
+import { listInterestTags } from '../../api/recommendations';
 import Button from '../../components/Button';
 import FormErrorSummary from '../../components/FormErrorSummary';
 import { GALLERIES, CATEGORIES } from '../../api/constants';
@@ -34,6 +37,9 @@ export default function CollectionItemEditor({ item, exhibitions, onSave, onClos
   const set = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
   const [attempted, setAttempted] = useState(false);
+  // Interest tags drive members' recommendations (see recommendation_service).
+  const interestTags = useAsync(() => listInterestTags(), []);
+  const [tags, setTags] = useState(item?.tags ?? []);
 
   // One object describing everything that is wrong right now. Rendered as a
   // summary above the buttons and beside the individual fields, but only
@@ -82,6 +88,7 @@ export default function CollectionItemEditor({ item, exhibitions, onSave, onClos
       exhibition_id: form.exhibition_id || null,
       is_family_friendly: Boolean(form.is_family_friendly),
       status,
+      tags,
     });
   };
 
@@ -232,6 +239,14 @@ export default function CollectionItemEditor({ item, exhibitions, onSave, onClos
           </span>
         </span>
       </label>
+      {interestTags.data && (
+        <InterestPicker
+          tags={interestTags.data}
+          selected={tags}
+          onChange={setTags}
+          label="Interest tags — members who chose these see it in their recommendations"
+        />
+      )}
     </Modal>
   );
 }

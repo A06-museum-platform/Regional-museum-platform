@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import require_admin
 from app.db.session import get_session
 from app.schemas.membership import MembershipListOut, MembershipOut
+from app.services import activity_service
 from app.services.membership_service import approve, list_memberships, reject
 
 router = APIRouter(
@@ -38,10 +39,24 @@ async def list_applications(
 
 
 @router.post("/{membership_id}/approve", response_model=MembershipOut)
-async def approve_application(membership_id: int, db: AsyncSession = Depends(get_session)):
-    return await approve(db, membership_id)
+async def approve_application(
+    membership_id: int,
+    admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    member = await approve(db, membership_id)
+    await activity_service.record(db, admin, "member.approved", member.full_name,
+                                  reference=member.member_ref, subject_user_id=member.user_id)
+    return member
 
 
 @router.post("/{membership_id}/reject", response_model=MembershipOut)
-async def reject_application(membership_id: int, db: AsyncSession = Depends(get_session)):
-    return await reject(db, membership_id)
+async def reject_application(
+    membership_id: int,
+    admin: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    member = await reject(db, membership_id)
+    await activity_service.record(db, admin, "member.declined", member.full_name,
+                                  reference=member.member_ref, subject_user_id=member.user_id)
+    return member

@@ -1,5 +1,30 @@
 # Decision log
 
+## 2026-10-23 — Member portal, interests and recommendations
+
+**Status:** accepted.
+
+- **Migration 011: interests.** A fixed vocabulary of eight interest tags
+  (reference data shipped in the migration), `user_interest`, and tag links
+  for exhibitions, events and collection objects. Staff tag content in the
+  three editors; members choose interests on their account page.
+- **Recommendation algorithm** (`recommendation_service.py`): content-based
+  filtering. Candidates are things a member can act on now (open
+  exhibitions, upcoming sessions with places they haven't registered for,
+  published objects); score = 10 × shared tags, +3 family-suitable when the
+  membership covers children, +2 session within 14 days, +1 exhibition or
+  highlight. Unmatched content is dropped; with no interests chosen, a
+  "Popular with visitors" ranking is shown instead of an empty page. Each
+  result says which interests it matched.
+- **Recommendations are a member benefit** (role matrix): a visitor account
+  gets 403 from the API and an invitation to join in the UI, but can save
+  interests ahead of joining.
+- **Own activity** (`GET /api/activity/me`): entries the account made or
+  that were about it (an approval). Bookings, cancellations, registrations,
+  applications and every admin decision (with its reason) are now logged.
+- **`membership.children_covered` is stored** and member-ticket limits use
+  it (adults from the plan + children on the membership).
+
 ## 2026-10-23 — Data model enrichment, staff content management, activity log
 
 **Status:** accepted.

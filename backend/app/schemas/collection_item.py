@@ -33,6 +33,8 @@ class CollectionItemOut(BaseModel):
     is_family_friendly: bool
     is_highlight: bool
     status: str
+    # Interest tag slugs (migration 011), used for recommendations.
+    tags: list[str] = []
 
 
 class CollectionItemDetailOut(CollectionItemOut):
@@ -70,6 +72,7 @@ class CollectionItemIn(BaseModel):
     is_family_friendly: bool = False
     is_highlight: bool = False
     status: PublishStatus = "draft"
+    tags: list[str] = Field(default_factory=list, max_length=8)
 
     @model_validator(mode="after")
     def _check(self):
@@ -101,3 +104,4 @@ class CollectionItemPatch(BaseModel):
     is_family_friendly: Optional[bool] = None
     is_highlight: Optional[bool] = None
     status: Optional[PublishStatus] = None
+    tags: Optional[list[str]] = None

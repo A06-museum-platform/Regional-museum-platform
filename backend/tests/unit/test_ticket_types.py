@@ -94,6 +94,8 @@ def _membership(plan="Family", status="Active", expiry=None):
         "membership_type": plan, "application_date": date(2026, 7, 1),
         "start_date": date(2026, 7, 2),
         "expiry_date": expiry or date.today() + timedelta(days=200), "status": status,
+        # Family and Patron plans cover 2 adults; these members registered 3 children.
+        "children_covered": 3 if plan in ("Family", "Patron") else 0,
     }
 
 

@@ -27,6 +27,8 @@ class ExhibitionOut(BaseModel):
     status: str
     phase: Literal["upcoming", "current", "closed"]
     item_count: int
+    # Interest tag slugs (migration 011), used for recommendations.
+    tags: list[str] = []
 
 
 class ExhibitionDetailOut(ExhibitionOut):
@@ -60,6 +62,7 @@ class ExhibitionIn(BaseModel):
     age_min: Optional[int] = Field(default=None, ge=0, le=120)
     age_max: Optional[int] = Field(default=None, ge=0, le=120)
     status: PublishStatus = "draft"
+    tags: list[str] = Field(default_factory=list, max_length=8)
 
     @model_validator(mode="before")
     @classmethod
@@ -97,6 +100,7 @@ class ExhibitionPatch(BaseModel):
     age_min: Optional[int] = Field(default=None, ge=0, le=120)
     age_max: Optional[int] = Field(default=None, ge=0, le=120)
     status: Optional[PublishStatus] = None
+    tags: Optional[list[str]] = None
 
     @model_validator(mode="before")
     @classmethod

@@ -42,6 +42,11 @@ STATUS_TO_API = {"Draft": "draft", "Scheduled": "published", "Cancelled": "cance
                  "Completed": "completed"}
 STATUS_TO_DB = {v: k for k, v in STATUS_TO_API.items()}
 
+async def _tagged(db: AsyncSession, items):
+    from app.services.recommendation_service import attach_tags
+    return await attach_tags(db, "event", items)
+
+
 _STARTS = f"((ev.event_date + ev.start_time) AT TIME ZONE '{MUSEUM_TIMEZONE}')"
 _ENDS = f"((ev.event_date + ev.end_time) AT TIME ZONE '{MUSEUM_TIMEZONE}')"
 _TAKEN = ("(SELECT COALESCE(SUM(r.party_size), 0) FROM event_registration r "
@@ -145,7 +150,7 @@ async def search(
             {**params, "limit": size, "offset": (page - 1) * size},
         )
     ).all()
-    return [_to_event(row) for row in rows], total
+    return await _tagged(db, [_to_event(row) for row in rows]), total
 
 
 async def _row_by_key(db: AsyncSession, key: str, *, public: bool):
@@ -159,7 +164,7 @@ async def get_event(db: AsyncSession, key) -> EventOut:
     row = await _row_by_key(db, str(key), public=True)
     if row is None:
         raise ApiError(404, "Event not found", "NOT_FOUND")
-    return _to_event(row)
+    return (await _tagged(db, [_to_event(row)]))[0]
 
 
 # ---------------------------------------------------------------------------
@@ -305,7 +310,7 @@ async def staff_list(db: AsyncSession, *, q=None, status=None, gallery=None):
         await db.execute(text(_SELECT + where + "ORDER BY ev.event_date, ev.start_time, ev.event_id"),
                          params)
     ).all()
-    return [_to_event(r) for r in rows], len(rows)
+    return await _tagged(db, [_to_event(r) for r in rows]), len(rows)
 
 
 async def _staff_row(db: AsyncSession, event_id: int):
@@ -343,8 +348,11 @@ async def create(db: AsyncSession, body: EventIn) -> EventOut:
              "age_min": body.age_min, "age_max": body.age_max, "status": STATUS_TO_DB[body.status]},
         )
     ).scalar_one()
+    if body.tags:
+        from app.services.recommendation_service import set_content_tags
+        await set_content_tags(db, "event", new_id, body.tags)
     await db.commit()
-    return _to_event(await _staff_row(db, new_id))
+    return (await _tagged(db, [_to_event(await _staff_row(db, new_id))]))[0]
 
 
 async def update(db: AsyncSession, event_id: int, body: EventPatch) -> EventOut:
@@ -353,8 +361,13 @@ async def update(db: AsyncSession, event_id: int, body: EventPatch) -> EventOut:
     row = await _staff_row(db, event_id)
     current = _to_event(row)
     changes = body.model_dump(exclude_unset=True)
+    tags = changes.pop("tags", None)
+    if tags is not None:
+        from app.services.recommendation_service import set_content_tags
+        await set_content_tags(db, "event", event_id, tags)
+        await db.commit()
     if not changes:
-        return current
+        return (await _tagged(db, [_to_event(await _staff_row(db, event_id))]))[0]
     merged = current.model_dump() | {k: v for k, v in changes.items() if v is not None}
 
     sets: dict = {}
@@ -386,12 +399,12 @@ async def update(db: AsyncSession, event_id: int, body: EventPatch) -> EventOut:
     if "title" in changes and changes["title"] != current.title:
         sets["slug"] = await unique_slug(db, "event", "event_id", changes["title"], event_id)
     if not sets:
-        return current
+        return (await _tagged(db, [current]))[0]
     assignments = ", ".join(f"{c} = :{c}" for c in sets)
     await db.execute(text(f"UPDATE event SET {assignments}, updated_at = now() WHERE event_id = :id"),
                      {**sets, "id": event_id})
     await db.commit()
-    return _to_event(await _staff_row(db, event_id))
+    return (await _tagged(db, [_to_event(await _staff_row(db, event_id))]))[0]
 
 
 async def delete(db: AsyncSession, event_id: int) -> str:

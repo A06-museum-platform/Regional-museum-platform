@@ -37,6 +37,11 @@ _SELECT = (
 
 _NOT_FOUND = "That collection item does not exist."
 
+async def _tagged(db: AsyncSession, items):
+    from app.services.recommendation_service import attach_tags
+    return await attach_tags(db, "collection_item", items)
+
+
 
 def _to_item(row) -> CollectionItemOut:
     return CollectionItemOut(
@@ -131,7 +136,7 @@ async def search(
             {**params, "limit": page_size, "offset": (page - 1) * page_size},
         )
     ).all()
-    return [_to_item(row) for row in rows], total
+    return await _tagged(db, [_to_item(row) for row in rows]), total
 
 
 async def get_by_slug(db: AsyncSession, slug: str) -> CollectionItemDetailOut:
@@ -141,7 +146,7 @@ async def get_by_slug(db: AsyncSession, slug: str) -> CollectionItemDetailOut:
     ).first()
     if row is None:
         raise ApiError(404, _NOT_FOUND, "NOT_FOUND")
-    return _to_detail(row)
+    return (await _tagged(db, [_to_detail(row)]))[0]
 
 
 async def items_for_exhibition(db: AsyncSession, exhibition_id: int) -> list[CollectionItemOut]:
@@ -152,7 +157,7 @@ async def items_for_exhibition(db: AsyncSession, exhibition_id: int) -> list[Col
             {"id": exhibition_id},
         )
     ).all()
-    return [_to_item(row) for row in rows]
+    return await _tagged(db, [_to_item(row) for row in rows])
 
 
 # ---------------------------------------------------------------------------
@@ -164,14 +169,14 @@ async def staff_list(db: AsyncSession, **filters) -> tuple[list[CollectionItemDe
     rows = (
         await db.execute(text(_SELECT + where + "ORDER BY c.updated_at DESC, c.item_id DESC"), params)
     ).all()
-    return [_to_detail(row) for row in rows], len(rows)
+    return await _tagged(db, [_to_detail(row) for row in rows]), len(rows)
 
 
 async def _staff_get(db: AsyncSession, item_id: int) -> CollectionItemDetailOut:
     row = (await db.execute(text(_SELECT + "WHERE c.item_id = :id"), {"id": item_id})).first()
     if row is None:
         raise ApiError(404, "That object no longer exists.", "NOT_FOUND")
-    return _to_detail(row)
+    return (await _tagged(db, [_to_detail(row)]))[0]
 
 
 async def _check_exhibition(db: AsyncSession, exhibition_id: Optional[int]) -> None:
@@ -237,6 +242,9 @@ async def create(db: AsyncSession, body: CollectionItemIn) -> CollectionItemDeta
                 params,
             )
         ).scalar_one()
+        if body.tags:
+            from app.services.recommendation_service import set_content_tags
+            await set_content_tags(db, "collection_item", new_id, body.tags)
         await db.commit()
     except IntegrityError:
         await db.rollback()
@@ -247,8 +255,13 @@ async def create(db: AsyncSession, body: CollectionItemIn) -> CollectionItemDeta
 async def update(db: AsyncSession, item_id: int, body: CollectionItemPatch) -> CollectionItemDetailOut:
     current = await _staff_get(db, item_id)
     changes = _clean(body.model_dump(exclude_unset=True))
+    tags = changes.pop("tags", None)
+    if tags is not None:
+        from app.services.recommendation_service import set_content_tags
+        await set_content_tags(db, "collection_item", item_id, tags)
+        await db.commit()
     if not changes:
-        return current
+        return await _staff_get(db, item_id)
 
     merged = current.model_dump() | changes
     if merged["year_from"] is not None and merged["year_to"] is not None \

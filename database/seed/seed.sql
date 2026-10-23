@@ -299,6 +299,123 @@ JOIN booking b ON b.booking_reference = v.reference
 JOIN ticket_type tt ON tt.ticket_type_id = v.ticket_type_id;
 
 
+
+-- =========================================================
+-- 15. Interest tags on content, and members' chosen interests
+-- =========================================================
+
+INSERT INTO exhibition_tag (exhibition_id, tag_id)
+SELECT c.exhibition_id, t.tag_id
+FROM (VALUES
+('colonial-mining-overland-telegraph', 'mining'),
+('colonial-mining-overland-telegraph', 'telegraph'),
+('colonial-mining-overland-telegraph', 'science'),
+('kaurna-living-waters', 'aboriginal_culture'),
+('kaurna-living-waters', 'family_history'),
+('narrow-gauge-mid-north', 'railways'),
+('narrow-gauge-mid-north', 'science'),
+('whaling-and-the-southern-coast', 'maritime'),
+('whaling-and-the-southern-coast', 'family_history'),
+('working-the-monster-mine', 'mining'),
+('working-the-monster-mine', 'family_history'),
+('working-the-monster-mine', 'science')
+) AS v(slug, tag)
+JOIN exhibition c ON c.slug = v.slug
+JOIN interest_tag t ON t.slug = v.tag;
+
+INSERT INTO event_tag (event_id, tag_id)
+SELECT c.event_id, t.tag_id
+FROM (VALUES
+('chronometers-longitude-southern-run', 'maritime'),
+('chronometers-longitude-southern-run', 'science'),
+('cornish-steam-engine-mechanics', 'mining'),
+('cornish-steam-engine-mechanics', 'science'),
+('cornish-steam-engine-mechanics', 'hands_on'),
+('curators-cabinet-specimen-store', 'mining'),
+('curators-cabinet-specimen-store', 'science'),
+('fleurieu-whaling-rigging-knotcraft', 'maritime'),
+('fleurieu-whaling-rigging-knotcraft', 'hands_on'),
+('junior-field-detective-telegraph', 'telegraph'),
+('junior-field-detective-telegraph', 'hands_on'),
+('junior-field-detective-telegraph', 'science'),
+('kaurna-weaving-ethnobotany-walk', 'aboriginal_culture'),
+('kaurna-weaving-ethnobotany-walk', 'hands_on'),
+('morse-code-galvanic-batteries', 'telegraph'),
+('morse-code-galvanic-batteries', 'science'),
+('morse-code-galvanic-batteries', 'hands_on'),
+('narrow-gauge-in-miniature', 'railways'),
+('narrow-gauge-in-miniature', 'hands_on'),
+('night-at-the-monster-mine', 'mining'),
+('night-at-the-monster-mine', 'family_history'),
+('reading-the-wage-ledger', 'family_history'),
+('reading-the-wage-ledger', 'mining'),
+('summer-twilight-telegraph', 'telegraph')
+) AS v(slug, tag)
+JOIN event c ON c.slug = v.slug
+JOIN interest_tag t ON t.slug = v.tag;
+
+INSERT INTO collection_item_tag (item_id, tag_id)
+SELECT c.item_id, t.tag_id
+FROM (VALUES
+('azurite-nodule-moonta', 'mining'),
+('copper-relay-key-overland-telegraph', 'telegraph'),
+('copper-relay-key-overland-telegraph', 'science'),
+('cornish-beam-engine-flywheel-segment', 'mining'),
+('cornish-beam-engine-flywheel-segment', 'science'),
+('kaurna-language-word-list', 'aboriginal_culture'),
+('malachite-matrix-burra', 'mining'),
+('malachite-matrix-burra', 'hands_on'),
+('morse-sounder-resonator-box', 'telegraph'),
+('morse-sounder-resonator-box', 'hands_on'),
+('narrow-gauge-locomotive-builder-plate', 'railways'),
+('overland-telegraph-survey-field-book', 'telegraph'),
+('overland-telegraph-survey-field-book', 'family_history'),
+('redruth-smelter-wage-ledger', 'family_history'),
+('redruth-smelter-wage-ledger', 'mining'),
+('schoolchildren-burra-open-cut', 'family_history'),
+('schoolchildren-burra-open-cut', 'mining'),
+('ships-chronometer-victor-harbor', 'maritime'),
+('ships-chronometer-victor-harbor', 'science'),
+('whaling-crew-encounter-bay', 'maritime'),
+('whaling-crew-encounter-bay', 'family_history'),
+('whim-winding-drum-unattributed', 'mining'),
+('whim-winding-drum-unattributed', 'science')
+) AS v(slug, tag)
+JOIN collection_item c ON c.slug = v.slug
+JOIN interest_tag t ON t.slug = v.tag;
+
+-- Ben likes mining and hands-on activities; Priya (family member) telegraph
+-- and the sea; Mei (patron) Aboriginal culture and family history.
+INSERT INTO user_interest (user_id, tag_id)
+SELECT v.user_id, t.tag_id
+FROM (VALUES (2, 'mining'), (2, 'hands_on'), (5, 'telegraph'), (5, 'maritime'), (5, 'hands_on'),
+             (9, 'aboriginal_culture'), (9, 'family_history')) AS v(user_id, tag)
+JOIN interest_tag t ON t.slug = v.tag;
+
+
+-- =========================================================
+-- 16. Activity log history (migration 010)
+-- What the server would have written as these records were created, so
+-- the member "Recent activity" panel and the admin log aren't empty.
+-- =========================================================
+
+INSERT INTO activity_log
+(created_at, actor_user_id, actor_name, actor_role, action, target, reason, reference, subject_user_id)
+VALUES
+(now() - INTERVAL '114 days', 2, 'Ben Wilson', 'visitor', 'member.applied', 'Individual membership', NULL, 'SA-0001', 2),
+(now() - INTERVAL '113 days', 4, 'James Anderson', 'admin', 'member.approved', 'Ben Wilson — Individual (SA-0001)', NULL, 'SA-0001', 2),
+(now() - INTERVAL '30 days', 2, 'Ben Wilson', 'member', 'booking.created', 'Visit — 1 ticket', NULL, 'SARHN-10002', 2),
+(now() - INTERVAL '27 days', 2, 'Ben Wilson', 'member', 'event.registered', 'Night at the Monster Mine: lantern tour — 4 people', NULL, 'SARHN-EV-20007', 2),
+(now() - INTERVAL '12 days', 3, 'Emma Taylor', 'staff', 'event.published', 'Morse code and galvanic batteries: hands-on lab', NULL, NULL, 3),
+(now() - INTERVAL '12 days', 4, 'James Anderson', 'admin', 'member.declined', 'Jack Robertson — Individual (SA-0008)', 'Application details could not be verified', 'SA-0008', 10),
+(now() - INTERVAL '9 days', 3, 'Emma Taylor', 'staff', 'opening_hours.updated', 'Weekly pattern and 0 dated exceptions', NULL, NULL, 3),
+(now() - INTERVAL '6 days', 3, 'Emma Taylor', 'staff', 'collection.updated', 'Malachite matrix, Burra', NULL, NULL, 3),
+(now() - INTERVAL '4 days', 11, 'Sofia Rossi', 'visitor', 'booking.cancelled', 'Visit', NULL, 'SARHN-10005', 11),
+(now() - INTERVAL '3 days', 1, 'Alice Brown', 'visitor', 'member.applied', 'Individual membership', NULL, 'SA-0002', 1),
+(now() - INTERVAL '2 days', 2, 'Ben Wilson', 'member', 'booking.created', 'Visit — 2 tickets', NULL, 'SARHN-10001', 2),
+(now() - INTERVAL '1 day', 1, 'Alice Brown', 'visitor', 'booking.created', 'Visit — 4 tickets', NULL, 'SARHN-10003', 1);
+
+
 -- =========================================================
 -- 14. Media
 -- No placeholder photographs: random stock images would put a beach on a

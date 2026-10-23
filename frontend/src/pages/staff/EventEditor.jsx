@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import Modal from '../../components/Modal';
+import InterestPicker from '../../components/member/InterestPicker';
+import useAsync from '../../hooks/useAsync';
+import { listInterestTags } from '../../api/recommendations';
 import Button from '../../components/Button';
 import FormErrorSummary from '../../components/FormErrorSummary';
 import { GALLERIES } from '../../api/constants';
@@ -52,6 +55,9 @@ export default function EventEditor({ event, onSave, onClose, busy, error }) {
   const set = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
   const [attempted, setAttempted] = useState(false);
+  // Interest tags drive members' recommendations (see recommendation_service).
+  const interestTags = useAsync(() => listInterestTags(), []);
+  const [tags, setTags] = useState(event?.tags ?? []);
   const [blocking, setBlocking] = useState({});
 
   const errors = {};
@@ -93,6 +99,7 @@ export default function EventEditor({ event, onSave, onClose, busy, error }) {
       age_min: form.age_min === '' ? null : Number(form.age_min),
       age_max: form.age_max === '' ? null : Number(form.age_max),
       status,
+      tags,
     });
   }
 
@@ -221,6 +228,14 @@ export default function EventEditor({ event, onSave, onClose, busy, error }) {
           </div>
         </div>
       </div>
+      {interestTags.data && (
+        <InterestPicker
+          tags={interestTags.data}
+          selected={tags}
+          onChange={setTags}
+          label="Interest tags — members who chose these see it in their recommendations"
+        />
+      )}
     </Modal>
   );
 }

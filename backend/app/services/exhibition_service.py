@@ -22,6 +22,11 @@ from app.services import collection_service
 from app.services.content_common import GALLERY_LABELS, like_pattern, primary_image_sql, unique_slug
 from app.services.event_service import MUSEUM_TIMEZONE
 
+async def _tagged(db: AsyncSession, items):
+    from app.services.recommendation_service import attach_tags
+    return await attach_tags(db, "exhibition", items)
+
+
 _TODAY = f"(now() AT TIME ZONE '{MUSEUM_TIMEZONE}')::date"
 
 _PHASE = (
@@ -89,7 +94,7 @@ async def list_public(
             {**params, "staff": False, "limit": page_size, "offset": (page - 1) * page_size},
         )
     ).all()
-    return [_to_out(r) for r in rows], total
+    return await _tagged(db, [_to_out(r) for r in rows]), total
 
 
 async def get_public(db: AsyncSession, slug: str) -> ExhibitionDetailOut:
@@ -102,7 +107,8 @@ async def get_public(db: AsyncSession, slug: str) -> ExhibitionDetailOut:
     if row is None:
         raise ApiError(404, "That exhibition does not exist.", "NOT_FOUND")
     items = await collection_service.items_for_exhibition(db, row.exhibition_id)
-    return ExhibitionDetailOut(**_to_out(row).model_dump(), items=items)
+    out = (await _tagged(db, [_to_out(row)]))[0]
+    return ExhibitionDetailOut(**out.model_dump(), items=items)
 
 
 # ---------------------------------------------------------------------------
@@ -115,7 +121,7 @@ async def staff_list(db: AsyncSession, *, q=None, gallery=None, status=None):
         await db.execute(text(_SELECT + where + "ORDER BY x.start_date DESC, x.exhibition_id DESC"),
                          {**params, "staff": True})
     ).all()
-    return [_to_out(r) for r in rows], len(rows)
+    return await _tagged(db, [_to_out(r) for r in rows]), len(rows)
 
 
 async def _staff_get(db: AsyncSession, exhibition_id: int) -> ExhibitionOut:
@@ -125,7 +131,7 @@ async def _staff_get(db: AsyncSession, exhibition_id: int) -> ExhibitionOut:
     ).first()
     if row is None:
         raise ApiError(404, "That exhibition no longer exists.", "NOT_FOUND")
-    return _to_out(row)
+    return (await _tagged(db, [_to_out(row)]))[0]
 
 
 def _legacy_status(start, end, today) -> str:
@@ -158,6 +164,9 @@ async def create(db: AsyncSession, body: ExhibitionIn) -> ExhibitionOut:
              "age_min": body.age_min, "age_max": body.age_max, "status": body.status},
         )
     ).scalar_one()
+    if body.tags:
+        from app.services.recommendation_service import set_content_tags
+        await set_content_tags(db, "exhibition", new_id, body.tags)
     await db.commit()
     return await _staff_get(db, new_id)
 
@@ -165,8 +174,13 @@ async def create(db: AsyncSession, body: ExhibitionIn) -> ExhibitionOut:
 async def update(db: AsyncSession, exhibition_id: int, body: ExhibitionPatch) -> ExhibitionOut:
     current = await _staff_get(db, exhibition_id)
     changes = body.model_dump(exclude_unset=True)
+    tags = changes.pop("tags", None)
+    if tags is not None:
+        from app.services.recommendation_service import set_content_tags
+        await set_content_tags(db, "exhibition", exhibition_id, tags)
+        await db.commit()
     if not changes:
-        return current
+        return await _staff_get(db, exhibition_id)
     merged = current.model_dump() | changes
     if merged["start_date"] is None:
         raise ApiError(400, "An exhibition needs a start date.", "VALIDATION_ERROR")

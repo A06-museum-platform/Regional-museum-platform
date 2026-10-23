@@ -12,8 +12,10 @@ from app.api.admin.activity import router as admin_activity_router
 from app.api.admin.members import router as admin_members_router
 from app.api.admin.memberships import router as admin_memberships_router
 from app.api.admin.users import router as admin_users_router
+from app.api.member.activity import router as member_activity_router
 from app.api.member.bookings import router as member_bookings_router
 from app.api.member.membership import router as member_membership_router
+from app.api.member.recommendations import router as recommendations_router
 from app.api.public.auth import router as auth_router
 from app.api.public.bookings import router as public_bookings_router
 from app.api.public.collections import router as collections_router
@@ -48,6 +50,8 @@ app.include_router(visitor_information_router)
 app.include_router(public_bookings_router)
 app.include_router(member_bookings_router)
 app.include_router(member_membership_router)
+app.include_router(member_activity_router)
+app.include_router(recommendations_router)
 app.include_router(staff_media_router)
 app.include_router(staff_collection_items_router)
 app.include_router(staff_exhibitions_router)

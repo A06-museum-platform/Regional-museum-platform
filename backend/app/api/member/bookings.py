@@ -23,6 +23,7 @@ from app.api.deps import STAFF_ROLES, get_current_user
 from app.db.session import get_session
 from app.schemas.booking import BookingIn, BookingListOut, BookingOut
 from app.schemas.user import UserOut
+from app.services import activity_service
 from app.services.booking_service import cancel_booking, create_booking, get_booking, list_bookings
 
 router = APIRouter(prefix="/api/bookings", tags=["bookings"])
@@ -34,7 +35,13 @@ async def book_tickets(
     user: UserOut = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
 ):
-    return await create_booking(db, user.id, body)
+    booking = await create_booking(db, user.id, body)
+    count = sum(line.quantity for line in booking.lines)
+    await activity_service.record(db, user, "booking.created",
+                                  f"{booking.visit_date:%a %d %b %Y}, {booking.arrival_window.start} — "
+                                  f"{count} ticket{'s' if count != 1 else ''}",
+                                  reference=booking.reference)
+    return booking
 
 
 @router.get("/me", response_model=BookingListOut)
@@ -63,4 +70,8 @@ async def cancel_my_booking(
     user: UserOut = Depends(get_current_user),
     db: AsyncSession = Depends(get_session),
 ):
-    return await cancel_booking(db, reference, user.id, sees_all=user.role in STAFF_ROLES)
+    booking = await cancel_booking(db, reference, user.id, sees_all=user.role in STAFF_ROLES)
+    await activity_service.record(db, user, "booking.cancelled",
+                                  f"{booking.visit_date:%a %d %b %Y}, {booking.arrival_window.start}",
+                                  reference=booking.reference, subject_user_id=booking.user_id)
+    return booking

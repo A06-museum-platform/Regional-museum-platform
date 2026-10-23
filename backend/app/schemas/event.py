@@ -41,6 +41,8 @@ class EventOut(BaseModel):
     event_time: datetime
     location: Optional[str]
     thumbnail_url: Optional[str]
+    # Interest tag slugs (migration 011), used for recommendations.
+    tags: list[str] = []
 
 
 class EventListOut(BaseModel):
@@ -74,6 +76,7 @@ class EventIn(BaseModel):
     age_min: Optional[int] = Field(default=None, ge=0, le=120)
     age_max: Optional[int] = Field(default=None, ge=0, le=120)
     status: EventStatus = "draft"
+    tags: list[str] = Field(default_factory=list, max_length=8)
 
     @model_validator(mode="after")
     def _check(self):
@@ -102,6 +105,7 @@ class EventPatch(BaseModel):
     age_min: Optional[int] = Field(default=None, ge=0, le=120)
     age_max: Optional[int] = Field(default=None, ge=0, le=120)
     status: Optional[EventStatus] = None
+    tags: Optional[list[str]] = None
 
 
 class RegistrationIn(BaseModel):
