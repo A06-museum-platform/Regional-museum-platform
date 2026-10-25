@@ -22,7 +22,8 @@ import styles from '../../components/membership/Membership.module.css';
 export default function MembershipPlansPage() {
   const navigate = useNavigate();
   const { user, ready } = useAuth();
-  const isMemberAccount = user?.role === 'member';
+  // Visitor and member accounts can hold a membership; staff and admin can't.
+  const isMemberAccount = user?.role === 'visitor' || user?.role === 'member';
 
   const plans = useAsync(listMembershipPlans, []);
   const mine = useAsync(
@@ -111,11 +112,11 @@ export default function MembershipPlansPage() {
         <section className={styles.apply} aria-labelledby="apply-heading">
           <div className={styles.applyHead}>
             <Pill tone="ochre">Prototype</Pill>
-            <h2 id="apply-heading">Applications are reviewed by staff</h2>
+            <h2 id="apply-heading">Applications are approved by an administrator</h2>
           </div>
           <p>
             Submitting creates a pending membership record. No payment is taken in this prototype;
-            staff approve the application from the member management screen.
+            a museum administrator approves it, usually within a few days, and your account becomes a member account straight away.
           </p>
 
           {!ready || mine.loading ? (

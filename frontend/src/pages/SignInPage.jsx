@@ -37,7 +37,7 @@ export default function SignInPage() {
       const fromAllowed =
         from &&
         !(from.startsWith('/admin') && user.role !== 'admin') &&
-        !(from.startsWith('/staff') && user.role === 'member');
+        !(from.startsWith('/staff') && (user.role === 'visitor' || user.role === 'member'));
       navigate((fromAllowed && from) || LANDING_BY_ROLE[user.role] || '/', { replace: true });
     } catch (err) {
       setError(err.message);
