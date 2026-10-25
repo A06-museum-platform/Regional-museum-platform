@@ -76,6 +76,25 @@ for local demos only.
 To see the 403 page, sign in as Alice or Ben and open `/staff`, or as
 Emma (staff) and open an `/admin/...` page such as `/admin/members`.
 
+## Switching to real accounts
+
+Keep the seeded content (exhibitions, objects, events, hours) but replace
+the demo people with real ones:
+
+```bash
+# 1. Remove the 12 demo accounts and their bookings, registrations,
+#    memberships and activity (asks for confirmation)
+docker compose exec backend python /app/scripts/remove_demo_accounts.py
+
+# 2. Create the first administrator (prompts for a password)
+docker compose exec backend python /app/scripts/create_admin_user.py --email you@example.com --first Your --last Name
+```
+
+Anyone can then create an account at `/register`. To give a team member
+the staff workspace, they register first, then an administrator opens
+*Staff accounts & roles* (`/admin/accounts`), searches for them and
+chooses **Make staff**.
+
 ## Repository layout
 
 | Folder | Responsibility |
