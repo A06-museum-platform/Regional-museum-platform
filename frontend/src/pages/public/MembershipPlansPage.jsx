@@ -22,7 +22,8 @@ import styles from '../../components/membership/Membership.module.css';
 export default function MembershipPlansPage() {
   const navigate = useNavigate();
   const { user, ready } = useAuth();
-  const isMemberAccount = user?.role === 'member';
+  // Visitor and member accounts can hold a membership; staff and admin can't.
+  const isMemberAccount = user?.role === 'visitor' || user?.role === 'member';
 
   const plans = useAsync(listMembershipPlans, []);
   const mine = useAsync(

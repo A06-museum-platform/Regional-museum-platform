@@ -196,7 +196,7 @@ export default function BookingConfirmationPage() {
                     Cancel booking
                   </Button>
                 )}
-                {user.role === 'member' && (
+                {(user.role === 'visitor' || user.role === 'member') && (
                   <Link to="/account"><Button variant="ghost" size="sm">My bookings</Button></Link>
                 )}
               </div>
