@@ -6,7 +6,8 @@ import { formatPrice, ACCESSIBILITY_OPTIONS } from '../../api/constants';
 import { loadDraft, clearDraft, draftTotal, draftTicketCount } from '../../utils/bookingDraft';
 import BookingSteps from '../../components/booking/BookingSteps';
 import BookingSummary from '../../components/booking/BookingSummary';
-import SimulatedPaymentForm from '../../components/booking/SimulatedPaymentForm';
+import CardPaymentForm from '../../components/payment/CardPaymentForm';
+import { EMPTY_CARD, validateCard } from '../../utils/card';
 import FormErrorSummary from '../../components/FormErrorSummary';
 import EmptyState from '../../components/EmptyState';
 import Button from '../../components/Button';
@@ -18,7 +19,7 @@ function splitName(fullName = '') {
 }
 
 /** Error messages say what to do next, per the design review. */
-function validate(form, acknowledged) {
+function validate(form) {
   const errors = {};
   if (!form.first_name.trim()) errors.first_name = 'Add a first name for the pass.';
   if (!form.last_name.trim()) errors.last_name = 'Add a last name for the pass.';
@@ -32,12 +33,12 @@ function validate(form, acknowledged) {
   if (form.mobile.trim() && !/^[+\d][\d\s]{7,}$/.test(form.mobile.trim())) {
     errors.mobile = 'Use digits only for the mobile number, e.g. 0400 000 000.';
   }
-  if (!acknowledged) errors.ack = 'Tick the box to confirm you understand no payment will be taken.';
   return errors;
 }
 
 /**
- * Book tickets — step 2 of 3: who is visiting, and the simulated payment.
+ * Book tickets — step 2 of 3: who is visiting, and payment. The card form is
+ * a demonstration: card details stay in this component and are never sent.
  * Behind sign-in (route guard), so `user` is always present here.
  */
 export default function CheckoutPage() {
@@ -48,7 +49,7 @@ export default function CheckoutPage() {
   const { first, last } = splitName(user.full_name);
   const [form, setForm] = useState({ first_name: first, last_name: last, email: user.email, mobile: '' });
   const [accessibility, setAccessibility] = useState([]);
-  const [acknowledged, setAcknowledged] = useState(false);
+  const [card, setCard] = useState(EMPTY_CARD);
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -73,7 +74,7 @@ export default function CheckoutPage() {
     setAccessibility((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
 
   async function handleConfirm() {
-    const next = validate(form, acknowledged);
+    const next = { ...validate(form), ...(draftTotal(draft) > 0 ? validateCard(card) : {}) };
     setErrors(next);
     setSubmitError(null);
     if (Object.keys(next).length) return;
@@ -97,6 +98,7 @@ export default function CheckoutPage() {
         user
       );
       clearDraft();
+      setCard(EMPTY_CARD);
       navigate(`/book/confirmation/${booking.reference}`, { replace: true });
     } catch (err) {
       setSubmitError(err.message);
@@ -166,17 +168,26 @@ export default function CheckoutPage() {
             <div className="hint">Staff see this on the day's booking list so it is ready when you arrive.</div>
           </fieldset>
 
-          <SimulatedPaymentForm
-            totalLabel={total > 0 ? formatPrice(total) : null}
-            acknowledged={acknowledged}
-            onAcknowledge={(value) => {
-              setAcknowledged(value);
-              setErrors((prev) => ({ ...prev, ack: undefined }));
-            }}
-            onConfirm={handleConfirm}
-            busy={busy}
-            error={submitError}
-          />
+          {total > 0 ? (
+            <CardPaymentForm
+              card={card}
+              errors={errors}
+              amountLabel={formatPrice(total)}
+              idPrefix="bk-card"
+              onChange={(nextCard, changed) => {
+                setCard(nextCard);
+                setErrors((prev) => ({ ...prev, [changed]: undefined }));
+              }}
+            />
+          ) : (
+            <p className={styles.sectionHint} style={{ marginTop: 'var(--s-5)' }}>
+              Nothing to pay — these tickets are free.
+            </p>
+          )}
+          {submitError && <div className={styles.errorBox} role="alert">{submitError}</div>}
+          <Button onClick={handleConfirm} disabled={busy}>
+            {busy ? 'Processing…' : total > 0 ? `Pay ${formatPrice(total)} and book` : 'Confirm booking'}
+          </Button>
           <div style={{ marginTop: 'var(--s-4)' }}>
             <FormErrorSummary errors={shownErrors} />
           </div>

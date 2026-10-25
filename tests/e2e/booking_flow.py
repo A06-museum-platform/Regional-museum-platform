@@ -3,6 +3,7 @@ page. Mirrors the demo script: /book -> /book/details -> confirmation."""
 from playwright.sync_api import expect, sync_playwright
 
 import os
+import re
 BASE = os.environ.get("E2E_BASE_URL", "http://localhost:5173")
 OUT = os.environ.get("E2E_OUT", os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots"))
 
@@ -38,8 +39,12 @@ with sync_playwright() as p:
     page.screenshot(path=f"{OUT}/flow_2_details.png", full_page=True)
     page.locator("#bk-mobile").fill("0400 000 002")
     page.locator('input[type=checkbox]').first.check()      # step-free access
-    page.locator('input[type=checkbox]').last.check()       # payment acknowledgement
-    page.get_by_role("button", name="Confirm").click()
+    if page.locator("#bk-card-number").count():               # demonstration card form
+        page.locator("#bk-card-name").fill("Ben Wilson")
+        page.locator("#bk-card-number").fill("4111111111111111")
+        page.locator("#bk-card-expiry").fill("0829")
+        page.locator("#bk-card-cvc").fill("123")
+    page.get_by_role("button", name=re.compile(r"and book$|^Confirm booking$")).click()
     page.wait_for_url("**/book/confirmation/**", timeout=10000)
     page.wait_for_timeout(800)
     reference = page.url.rsplit("/", 1)[-1]

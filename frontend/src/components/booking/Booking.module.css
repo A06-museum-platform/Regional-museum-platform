@@ -209,21 +209,6 @@
 
 .check input { accent-color: var(--c-moss); }
 
-.simulated {
-  margin-top: var(--s-5);
-  border: 2px dashed var(--c-ochre);
-  background: var(--c-ochre-soft);
-  border-radius: var(--radius);
-  padding: var(--s-5);
-}
-
-.simulatedHead { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-2); }
-.simulatedHead h3 { margin: 0; }
-.simulated p { font-size: 14px; margin-bottom: var(--s-3); }
-
-.ack { display: flex; gap: var(--s-2); align-items: flex-start; font-size: var(--fs-sm); margin-bottom: var(--s-4); cursor: pointer; }
-.ack input { margin-top: 3px; accent-color: var(--c-moss); }
-
 .errorBox {
   background: var(--c-danger-soft);
   border: 1px solid var(--c-danger);

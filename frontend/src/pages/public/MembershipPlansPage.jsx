@@ -2,22 +2,21 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useAsync from '../../hooks/useAsync';
 import { useAuth } from '../../context/AuthContext';
-import { listMembershipPlans, getMyMembership, applyForMembership } from '../../api/memberships';
+import { listMembershipPlans, getMyMembership } from '../../api/memberships';
 import { coverageLabel } from '../../utils/membership';
 import MembershipPlanCard from '../../components/membership/MembershipPlanCard';
 import EmptyState from '../../components/EmptyState';
 import Skeleton from '../../components/Skeleton';
 import Button from '../../components/Button';
-import Pill from '../../components/Pill';
 import styles from '../../components/membership/Membership.module.css';
 
 /**
  * Membership — choose a plan and apply.
  *
- * Browsing is public; applying needs an account (Flow 6). There are no card
- * fields: applying creates a pending record that an administrator approves
- * from /admin/members, which gives the admin screen something real to act on
- * in the demo.
+ * Browsing is public; applying needs an account (Flow 6). "Continue to
+ * payment" opens /membership/checkout, where a demonstration card payment
+ * submits the application; an administrator then approves it on
+ * /admin/members.
  */
 export default function MembershipPlansPage() {
   const navigate = useNavigate();
@@ -33,9 +32,6 @@ export default function MembershipPlansPage() {
 
   const [selectedKey, setSelectedKey] = useState(null);
   const [children, setChildren] = useState(null); // null = plan's full allowance
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
-  const [submitted, setSubmitted] = useState(null);
 
   const planList = plans.data?.items || [];
   const selected =
@@ -50,21 +46,6 @@ export default function MembershipPlansPage() {
   function choose(plan) {
     setSelectedKey(plan.key);
     setChildren(plan.max_children);
-    setError(null);
-  }
-
-  async function handleApply() {
-    setBusy(true);
-    setError(null);
-    try {
-      const record = await applyForMembership({ plan_id: selected.id, children_covered: childCount }, user);
-      setSubmitted(record);
-      mine.reload();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
   }
 
   return (
@@ -95,28 +76,14 @@ export default function MembershipPlansPage() {
         </div>
       )}
 
-      {selected && (submitted ? (
-        <div className={styles.success} role="status">
-          <h2>Application received</h2>
-          <p>
-            Your {selected.display_name} membership for {coverageLabel(submitted)} is waiting for
-            approval (reference {submitted.member_ref}). No payment has been taken. You can check
-            its status on your account page at any time.
-          </p>
-          <div className={styles.row}>
-            <Link to="/account"><Button>Go to my account</Button></Link>
-            <Link to="/book"><Button variant="ghost">Book a visit meanwhile</Button></Link>
-          </div>
-        </div>
-      ) : (
+      {selected && (
         <section className={styles.apply} aria-labelledby="apply-heading">
           <div className={styles.applyHead}>
-            <Pill tone="ochre">Prototype</Pill>
-            <h2 id="apply-heading">Applications are approved by an administrator</h2>
+            <h2 id="apply-heading">Apply for {selected.display_name}</h2>
           </div>
           <p>
-            Submitting creates a pending membership record. No payment is taken in this prototype;
-            a museum administrator approves it, usually within a few days, and your account becomes a member account straight away.
+            Pay on the next page to submit your application. A museum administrator then approves
+            it, and your account becomes a member account straight away.
           </p>
 
           {!ready || mine.loading ? (
@@ -164,14 +131,15 @@ export default function MembershipPlansPage() {
                 )}
                 <div className="hint">Applying as {user.full_name} ({user.email}).</div>
               </div>
-              {error && <div className={styles.errorBox} role="alert">{error}</div>}
-              <Button onClick={handleApply} disabled={busy}>
-                {busy ? 'Submitting…' : `Submit ${selected.display_name} application`}
+              <Button
+                onClick={() => navigate(`/membership/checkout?plan=${selected.key}&children=${childCount}`)}
+              >
+                Continue to payment
               </Button>
             </>
           )}
         </section>
-      ))}
+      )}
     </div>
   );
 }
