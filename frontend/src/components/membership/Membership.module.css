@@ -59,8 +59,8 @@
 
 .apply {
   max-width: 640px;
-  border: 2px dashed var(--c-ochre);
-  background: var(--c-ochre-soft);
+  border: 1px solid var(--c-border);
+  background: var(--c-white);
   border-radius: var(--radius);
   padding: var(--s-5);
 }

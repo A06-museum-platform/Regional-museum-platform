@@ -4,7 +4,8 @@
 -- Load ONCE on a freshly migrated database (not idempotent).
 -- Content is the placeholder museum used by the front end: one museum,
 -- four galleries (Main Hall, Telegraph, Monster Mine, Encounter Bay).
--- Dates are relative to CURRENT_DATE, so whenever the demo database is
+-- Dates are relative to the museum's local date (Australia/Adelaide, not
+-- the server's UTC date), so whenever the demo database is
 -- seeded it has past and upcoming events, current exhibitions and
 -- future bookings.
 -- =========================================================
@@ -131,11 +132,11 @@ VALUES
 INSERT INTO exhibition
 (title, slug, summary, description, gallery, start_date, end_date, location, status, age_min, age_max, publish_status)
 VALUES
-('Colonial Mining & the Overland Telegraph', 'colonial-mining-overland-telegraph', 'How copper out of the mid-north paid for the line that connected Adelaide to the world.', 'In 1872 South Australia completed one of the great engineering feats of the century, linking Adelaide across 3,200 kilometres of arid desert to Darwin and the global telegraph network. This exhibition follows the copper, the capital and the people who made it possible.', 'telegraph', CURRENT_DATE - 236, CURRENT_DATE + 23, 'Telegraph Gallery', 'Current', 10, NULL, 'published'),
-('Working the Monster Mine', 'working-the-monster-mine', 'Cornish miners, Welsh smelters and the town that grew around the largest copper mine in the colony.', 'Wage ledgers, tools and photographs from six decades of work at Burra. The exhibition follows a single shift underground, from the change house to the pumping engine that kept the workings dry.', 'monster_mine', CURRENT_DATE - 251, NULL, 'Monster Mine Gallery', 'Current', NULL, NULL, 'published'),
-('Whaling and the Southern Coast', 'whaling-and-the-southern-coast', 'The shore stations of Encounter Bay, and what happened when the whales stopped coming.', 'Between 1837 and the 1890s shore-based whaling was among the colony’s first export industries. This exhibition sets the economics beside the ecology, and does not flinch from either.', 'encounter_bay', CURRENT_DATE - 174, CURRENT_DATE + 128, 'Encounter Bay Gallery', 'Current', 12, NULL, 'published'),
-('Kaurna Living Waters and Seasonal Calendars', 'kaurna-living-waters', 'Developed with Kaurna community members. Seasonal knowledge along the Karrawirra Parri.', 'Freshwater ecosystems, seasonal harvest cycles and language, presented under cultural authority and reviewed with the Kaurna community before display.', 'main_hall', CURRENT_DATE - 144, NULL, 'Main Hall', 'Current', NULL, NULL, 'published'),
-('Narrow Gauge: the lines that moved the mid-north', 'narrow-gauge-mid-north', 'Draft. Rolling stock, timetables and the closure of the branch lines.', 'Draft listing held back while the loan agreement for the locomotive plate is finalised.', 'main_hall', CURRENT_DATE + 84, NULL, 'Main Hall', 'Upcoming', NULL, NULL, 'draft');
+('Colonial Mining & the Overland Telegraph', 'colonial-mining-overland-telegraph', 'How copper out of the mid-north paid for the line that connected Adelaide to the world.', 'In 1872 South Australia completed one of the great engineering feats of the century, linking Adelaide across 3,200 kilometres of arid desert to Darwin and the global telegraph network. This exhibition follows the copper, the capital and the people who made it possible.', 'telegraph', (now() AT TIME ZONE 'Australia/Adelaide')::date - 236, (now() AT TIME ZONE 'Australia/Adelaide')::date + 23, 'Telegraph Gallery', 'Current', 10, NULL, 'published'),
+('Working the Monster Mine', 'working-the-monster-mine', 'Cornish miners, Welsh smelters and the town that grew around the largest copper mine in the colony.', 'Wage ledgers, tools and photographs from six decades of work at Burra. The exhibition follows a single shift underground, from the change house to the pumping engine that kept the workings dry.', 'monster_mine', (now() AT TIME ZONE 'Australia/Adelaide')::date - 251, NULL, 'Monster Mine Gallery', 'Current', NULL, NULL, 'published'),
+('Whaling and the Southern Coast', 'whaling-and-the-southern-coast', 'The shore stations of Encounter Bay, and what happened when the whales stopped coming.', 'Between 1837 and the 1890s shore-based whaling was among the colony’s first export industries. This exhibition sets the economics beside the ecology, and does not flinch from either.', 'encounter_bay', (now() AT TIME ZONE 'Australia/Adelaide')::date - 174, (now() AT TIME ZONE 'Australia/Adelaide')::date + 128, 'Encounter Bay Gallery', 'Current', 12, NULL, 'published'),
+('Kaurna Living Waters and Seasonal Calendars', 'kaurna-living-waters', 'Developed with Kaurna community members. Seasonal knowledge along the Karrawirra Parri.', 'Freshwater ecosystems, seasonal harvest cycles and language, presented under cultural authority and reviewed with the Kaurna community before display.', 'main_hall', (now() AT TIME ZONE 'Australia/Adelaide')::date - 144, NULL, 'Main Hall', 'Current', NULL, NULL, 'published'),
+('Narrow Gauge: the lines that moved the mid-north', 'narrow-gauge-mid-north', 'Draft. Rolling stock, timetables and the closure of the branch lines.', 'Draft listing held back while the loan agreement for the locomotive plate is finalised.', 'main_hall', (now() AT TIME ZONE 'Australia/Adelaide')::date + 84, NULL, 'Main Hall', 'Upcoming', NULL, NULL, 'draft');
 
 
 -- =========================================================
@@ -183,17 +184,17 @@ INSERT INTO event
 (title, slug, description, gallery, event_date, start_time, end_time, location, capacity, price, member_price,
  age_min, age_max, status)
 VALUES
-('Junior Field Detective: decoding the telegraph', 'junior-field-detective-telegraph', 'Young investigators decrypt real 1872 Morse transmissions, operate copper sounders and test rock samples to solve a 150-year-old missing courier mystery.', 'telegraph', CURRENT_DATE - 26, '10:30', '12:30', 'Telegraph Gallery', 20, 15.00, 0.00, 10, 14, 'Scheduled'),
-('Night at the Monster Mine: lantern tour', 'night-at-the-monster-mine', 'Walk the perimeter of the open cut by candle-replica lantern. Miners’ superstitions, Cornish folklore, and what the dark actually sounded like underground.', 'monster_mine', CURRENT_DATE - 20, '19:30', '21:00', 'Monster Mine Gallery', 30, 22.00, 18.00, 12, NULL, 'Scheduled'),
-('Cornish steam engine mechanics for teens', 'cornish-steam-engine-mechanics', 'Work alongside heritage steam conservators. Calculate piston compression, assemble authentic components, and find out why the pumps never stopped.', 'monster_mine', CURRENT_DATE - 12, '14:00', '16:00', 'Monster Mine Gallery', 16, 18.00, 0.00, 12, 16, 'Scheduled'),
-('Kaurna weaving and ethnobotany walk', 'kaurna-weaving-ethnobotany-walk', 'Guided by Kaurna cultural educators. Explore river red gum ecosystems, harvest native sedge plants, and practise a fundamental spiral coil.', 'main_hall', CURRENT_DATE + 3, '10:00', '12:00', 'Main Hall', 24, 10.00, 0.00, NULL, NULL, 'Scheduled'),
-('Curator''s cabinet: behind the specimen store', 'curators-cabinet-specimen-store', 'Members only. Senior curators open the climate-controlled subterranean vaults and bring out uncatalogued mineral collections.', 'monster_mine', CURRENT_DATE + 6, '18:00', '19:30', 'Monster Mine Gallery', 12, 0.00, 0.00, 18, NULL, 'Scheduled'),
-('Fleurieu whaling and rigging: young helmsman knotcraft', 'fleurieu-whaling-rigging-knotcraft', 'Master eight square-rigging knots, decode marine signal flags, and test block-and-tackle physics on a working replica.', 'encounter_bay', CURRENT_DATE + 9, '11:00', '13:00', 'Encounter Bay Gallery', 18, 12.00, 0.00, 8, 14, 'Scheduled'),
-('Reading the wage ledger: family history workshop', 'reading-the-wage-ledger', 'Bring a surname. Learn to read nineteenth-century mining payroll records and trace Cornish families through the mid-north.', 'monster_mine', CURRENT_DATE + 16, '13:00', '15:30', 'Monster Mine Gallery', 20, 15.00, 10.00, 16, NULL, 'Scheduled'),
-('Narrow gauge in miniature: build and run', 'narrow-gauge-in-miniature', 'Assemble a working model wagon, then run it on the gallery test track. Take the wagon home at the end of the session.', 'main_hall', CURRENT_DATE + 23, '10:00', '12:00', 'Main Hall', 15, 20.00, 15.00, 10, 14, 'Scheduled'),
-('Chronometers, longitude and the southern run', 'chronometers-longitude-southern-run', 'A curatorial lecture on how a few seconds a day put a ship miles off course, and what that meant for the whalers working out of Encounter Bay.', 'encounter_bay', CURRENT_DATE + 30, '18:30', '20:00', 'Encounter Bay Gallery', 60, 12.00, 0.00, 16, NULL, 'Scheduled'),
-('Morse code and galvanic batteries: hands-on lab', 'morse-code-galvanic-batteries', 'Build a working single-cell battery, wire a sounder, and send your first message down thirty metres of line.', 'telegraph', CURRENT_DATE + 37, '10:30', '12:00', 'Telegraph Gallery', 20, 15.00, 0.00, 10, 14, 'Scheduled'),
-('Summer twilight: telegraph under the stars', 'summer-twilight-telegraph', 'Draft listing. Evening session pairing the Morse lab with an outdoor astronomy talk. Dates not yet confirmed with the education team.', 'telegraph', CURRENT_DATE + 51, '19:00', '21:00', 'Telegraph Gallery', 40, 18.00, 0.00, 10, NULL, 'Draft');
+('Junior Field Detective: decoding the telegraph', 'junior-field-detective-telegraph', 'Young investigators decrypt real 1872 Morse transmissions, operate copper sounders and test rock samples to solve a 150-year-old missing courier mystery.', 'telegraph', (now() AT TIME ZONE 'Australia/Adelaide')::date - 26, '10:30', '12:30', 'Telegraph Gallery', 20, 15.00, 0.00, 10, 14, 'Scheduled'),
+('Night at the Monster Mine: lantern tour', 'night-at-the-monster-mine', 'Walk the perimeter of the open cut by candle-replica lantern. Miners’ superstitions, Cornish folklore, and what the dark actually sounded like underground.', 'monster_mine', (now() AT TIME ZONE 'Australia/Adelaide')::date - 20, '19:30', '21:00', 'Monster Mine Gallery', 30, 22.00, 18.00, 12, NULL, 'Scheduled'),
+('Cornish steam engine mechanics for teens', 'cornish-steam-engine-mechanics', 'Work alongside heritage steam conservators. Calculate piston compression, assemble authentic components, and find out why the pumps never stopped.', 'monster_mine', (now() AT TIME ZONE 'Australia/Adelaide')::date - 12, '14:00', '16:00', 'Monster Mine Gallery', 16, 18.00, 0.00, 12, 16, 'Scheduled'),
+('Kaurna weaving and ethnobotany walk', 'kaurna-weaving-ethnobotany-walk', 'Guided by Kaurna cultural educators. Explore river red gum ecosystems, harvest native sedge plants, and practise a fundamental spiral coil.', 'main_hall', (now() AT TIME ZONE 'Australia/Adelaide')::date + 3, '10:00', '12:00', 'Main Hall', 24, 10.00, 0.00, NULL, NULL, 'Scheduled'),
+('Curator''s cabinet: behind the specimen store', 'curators-cabinet-specimen-store', 'Members only. Senior curators open the climate-controlled subterranean vaults and bring out uncatalogued mineral collections.', 'monster_mine', (now() AT TIME ZONE 'Australia/Adelaide')::date + 6, '18:00', '19:30', 'Monster Mine Gallery', 12, 0.00, 0.00, 18, NULL, 'Scheduled'),
+('Fleurieu whaling and rigging: young helmsman knotcraft', 'fleurieu-whaling-rigging-knotcraft', 'Master eight square-rigging knots, decode marine signal flags, and test block-and-tackle physics on a working replica.', 'encounter_bay', (now() AT TIME ZONE 'Australia/Adelaide')::date + 9, '11:00', '13:00', 'Encounter Bay Gallery', 18, 12.00, 0.00, 8, 14, 'Scheduled'),
+('Reading the wage ledger: family history workshop', 'reading-the-wage-ledger', 'Bring a surname. Learn to read nineteenth-century mining payroll records and trace Cornish families through the mid-north.', 'monster_mine', (now() AT TIME ZONE 'Australia/Adelaide')::date + 16, '13:00', '15:30', 'Monster Mine Gallery', 20, 15.00, 10.00, 16, NULL, 'Scheduled'),
+('Narrow gauge in miniature: build and run', 'narrow-gauge-in-miniature', 'Assemble a working model wagon, then run it on the gallery test track. Take the wagon home at the end of the session.', 'main_hall', (now() AT TIME ZONE 'Australia/Adelaide')::date + 23, '10:00', '12:00', 'Main Hall', 15, 20.00, 15.00, 10, 14, 'Scheduled'),
+('Chronometers, longitude and the southern run', 'chronometers-longitude-southern-run', 'A curatorial lecture on how a few seconds a day put a ship miles off course, and what that meant for the whalers working out of Encounter Bay.', 'encounter_bay', (now() AT TIME ZONE 'Australia/Adelaide')::date + 30, '18:30', '20:00', 'Encounter Bay Gallery', 60, 12.00, 0.00, 16, NULL, 'Scheduled'),
+('Morse code and galvanic batteries: hands-on lab', 'morse-code-galvanic-batteries', 'Build a working single-cell battery, wire a sounder, and send your first message down thirty metres of line.', 'telegraph', (now() AT TIME ZONE 'Australia/Adelaide')::date + 37, '10:30', '12:00', 'Telegraph Gallery', 20, 15.00, 0.00, 10, 14, 'Scheduled'),
+('Summer twilight: telegraph under the stars', 'summer-twilight-telegraph', 'Draft listing. Evening session pairing the Morse lab with an outdoor astronomy talk. Dates not yet confirmed with the education team.', 'telegraph', (now() AT TIME ZONE 'Australia/Adelaide')::date + 51, '19:00', '21:00', 'Telegraph Gallery', 40, 18.00, 0.00, 10, NULL, 'Draft');
 
 
 -- =========================================================
@@ -203,48 +204,48 @@ VALUES
 INSERT INTO event_registration
 (user_id, event_id, party_size, contact_name, contact_email, registration_reference, status, registration_date)
 VALUES
-(5, 1, 4, 'Priya Sharma', 'priya.sharma@example.com', 'SARHN-EV-20001', 'Registered', (CURRENT_DATE - 33)::timestamp + time '10:00'),
-(6, 1, 3, 'Tom Nguyen', 'tom.nguyen@example.com', 'SARHN-EV-20002', 'Registered', (CURRENT_DATE - 33)::timestamp + time '10:00'),
-(7, 1, 2, 'Grace O''Connor', 'grace.oconnor@example.com', 'SARHN-EV-20003', 'Registered', (CURRENT_DATE - 33)::timestamp + time '10:00'),
-(8, 1, 1, 'Liam Papadopoulos', 'liam.papadopoulos@example.com', 'SARHN-EV-20004', 'Registered', (CURRENT_DATE - 33)::timestamp + time '10:00'),
-(9, 1, 3, 'Mei Chen', 'mei.chen@example.com', 'SARHN-EV-20005', 'Registered', (CURRENT_DATE - 33)::timestamp + time '10:00'),
-(10, 1, 1, 'Jack Robertson', 'jack.robertson@example.com', 'SARHN-EV-20006', 'Registered', (CURRENT_DATE - 33)::timestamp + time '10:00'),
-(2, 2, 4, 'Ben Wilson', 'ben@example.com', 'SARHN-EV-20007', 'Registered', (CURRENT_DATE - 27)::timestamp + time '10:00'),
-(1, 2, 3, 'Alice Brown', 'alice@example.com', 'SARHN-EV-20008', 'Registered', (CURRENT_DATE - 27)::timestamp + time '10:00'),
-(12, 2, 2, 'Noah Williams', 'noah.williams@example.com', 'SARHN-EV-20009', 'Registered', (CURRENT_DATE - 27)::timestamp + time '10:00'),
-(11, 2, 1, 'Sofia Rossi', 'sofia.rossi@example.com', 'SARHN-EV-20010', 'Registered', (CURRENT_DATE - 27)::timestamp + time '10:00'),
-(10, 2, 3, 'Jack Robertson', 'jack.robertson@example.com', 'SARHN-EV-20011', 'Registered', (CURRENT_DATE - 27)::timestamp + time '10:00'),
-(9, 2, 4, 'Mei Chen', 'mei.chen@example.com', 'SARHN-EV-20012', 'Registered', (CURRENT_DATE - 27)::timestamp + time '10:00'),
-(8, 2, 2, 'Liam Papadopoulos', 'liam.papadopoulos@example.com', 'SARHN-EV-20013', 'Registered', (CURRENT_DATE - 27)::timestamp + time '10:00'),
-(7, 2, 2, 'Grace O''Connor', 'grace.oconnor@example.com', 'SARHN-EV-20014', 'Registered', (CURRENT_DATE - 27)::timestamp + time '10:00'),
-(6, 2, 3, 'Tom Nguyen', 'tom.nguyen@example.com', 'SARHN-EV-20015', 'Registered', (CURRENT_DATE - 27)::timestamp + time '10:00'),
-(5, 2, 3, 'Priya Sharma', 'priya.sharma@example.com', 'SARHN-EV-20016', 'Registered', (CURRENT_DATE - 27)::timestamp + time '10:00'),
-(5, 3, 4, 'Priya Sharma', 'priya.sharma@example.com', 'SARHN-EV-20017', 'Registered', (CURRENT_DATE - 19)::timestamp + time '10:00'),
-(6, 3, 2, 'Tom Nguyen', 'tom.nguyen@example.com', 'SARHN-EV-20018', 'Registered', (CURRENT_DATE - 19)::timestamp + time '10:00'),
-(1, 4, 4, 'Alice Brown', 'alice@example.com', 'SARHN-EV-20019', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(12, 4, 3, 'Noah Williams', 'noah.williams@example.com', 'SARHN-EV-20020', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(11, 4, 2, 'Sofia Rossi', 'sofia.rossi@example.com', 'SARHN-EV-20021', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(5, 5, 4, 'Priya Sharma', 'priya.sharma@example.com', 'SARHN-EV-20022', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(6, 5, 3, 'Tom Nguyen', 'tom.nguyen@example.com', 'SARHN-EV-20023', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(7, 5, 2, 'Grace O''Connor', 'grace.oconnor@example.com', 'SARHN-EV-20024', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(8, 5, 1, 'Liam Papadopoulos', 'liam.papadopoulos@example.com', 'SARHN-EV-20025', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(9, 5, 2, 'Mei Chen', 'mei.chen@example.com', 'SARHN-EV-20026', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(1, 6, 4, 'Alice Brown', 'alice@example.com', 'SARHN-EV-20027', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(5, 7, 4, 'Priya Sharma', 'priya.sharma@example.com', 'SARHN-EV-20028', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(6, 7, 3, 'Tom Nguyen', 'tom.nguyen@example.com', 'SARHN-EV-20029', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(7, 7, 2, 'Grace O''Connor', 'grace.oconnor@example.com', 'SARHN-EV-20030', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(8, 7, 1, 'Liam Papadopoulos', 'liam.papadopoulos@example.com', 'SARHN-EV-20031', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(9, 7, 1, 'Mei Chen', 'mei.chen@example.com', 'SARHN-EV-20032', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(1, 8, 2, 'Alice Brown', 'alice@example.com', 'SARHN-EV-20033', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(5, 9, 4, 'Priya Sharma', 'priya.sharma@example.com', 'SARHN-EV-20034', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(6, 9, 3, 'Tom Nguyen', 'tom.nguyen@example.com', 'SARHN-EV-20035', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(7, 9, 2, 'Grace O''Connor', 'grace.oconnor@example.com', 'SARHN-EV-20036', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(8, 9, 1, 'Liam Papadopoulos', 'liam.papadopoulos@example.com', 'SARHN-EV-20037', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(9, 9, 3, 'Mei Chen', 'mei.chen@example.com', 'SARHN-EV-20038', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(10, 9, 4, 'Jack Robertson', 'jack.robertson@example.com', 'SARHN-EV-20039', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(11, 9, 2, 'Sofia Rossi', 'sofia.rossi@example.com', 'SARHN-EV-20040', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(12, 9, 2, 'Noah Williams', 'noah.williams@example.com', 'SARHN-EV-20041', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00'),
-(1, 9, 2, 'Alice Brown', 'alice@example.com', 'SARHN-EV-20042', 'Registered', (CURRENT_DATE - 7)::timestamp + time '10:00');
+(5, 1, 4, 'Priya Sharma', 'priya.sharma@example.com', 'SARHN-EV-20001', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 33)::timestamp + time '10:00'),
+(6, 1, 3, 'Tom Nguyen', 'tom.nguyen@example.com', 'SARHN-EV-20002', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 33)::timestamp + time '10:00'),
+(7, 1, 2, 'Grace O''Connor', 'grace.oconnor@example.com', 'SARHN-EV-20003', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 33)::timestamp + time '10:00'),
+(8, 1, 1, 'Liam Papadopoulos', 'liam.papadopoulos@example.com', 'SARHN-EV-20004', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 33)::timestamp + time '10:00'),
+(9, 1, 3, 'Mei Chen', 'mei.chen@example.com', 'SARHN-EV-20005', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 33)::timestamp + time '10:00'),
+(10, 1, 1, 'Jack Robertson', 'jack.robertson@example.com', 'SARHN-EV-20006', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 33)::timestamp + time '10:00'),
+(2, 2, 4, 'Ben Wilson', 'ben@example.com', 'SARHN-EV-20007', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 27)::timestamp + time '10:00'),
+(1, 2, 3, 'Alice Brown', 'alice@example.com', 'SARHN-EV-20008', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 27)::timestamp + time '10:00'),
+(12, 2, 2, 'Noah Williams', 'noah.williams@example.com', 'SARHN-EV-20009', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 27)::timestamp + time '10:00'),
+(11, 2, 1, 'Sofia Rossi', 'sofia.rossi@example.com', 'SARHN-EV-20010', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 27)::timestamp + time '10:00'),
+(10, 2, 3, 'Jack Robertson', 'jack.robertson@example.com', 'SARHN-EV-20011', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 27)::timestamp + time '10:00'),
+(9, 2, 4, 'Mei Chen', 'mei.chen@example.com', 'SARHN-EV-20012', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 27)::timestamp + time '10:00'),
+(8, 2, 2, 'Liam Papadopoulos', 'liam.papadopoulos@example.com', 'SARHN-EV-20013', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 27)::timestamp + time '10:00'),
+(7, 2, 2, 'Grace O''Connor', 'grace.oconnor@example.com', 'SARHN-EV-20014', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 27)::timestamp + time '10:00'),
+(6, 2, 3, 'Tom Nguyen', 'tom.nguyen@example.com', 'SARHN-EV-20015', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 27)::timestamp + time '10:00'),
+(5, 2, 3, 'Priya Sharma', 'priya.sharma@example.com', 'SARHN-EV-20016', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 27)::timestamp + time '10:00'),
+(5, 3, 4, 'Priya Sharma', 'priya.sharma@example.com', 'SARHN-EV-20017', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 19)::timestamp + time '10:00'),
+(6, 3, 2, 'Tom Nguyen', 'tom.nguyen@example.com', 'SARHN-EV-20018', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 19)::timestamp + time '10:00'),
+(1, 4, 4, 'Alice Brown', 'alice@example.com', 'SARHN-EV-20019', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(12, 4, 3, 'Noah Williams', 'noah.williams@example.com', 'SARHN-EV-20020', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(11, 4, 2, 'Sofia Rossi', 'sofia.rossi@example.com', 'SARHN-EV-20021', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(5, 5, 4, 'Priya Sharma', 'priya.sharma@example.com', 'SARHN-EV-20022', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(6, 5, 3, 'Tom Nguyen', 'tom.nguyen@example.com', 'SARHN-EV-20023', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(7, 5, 2, 'Grace O''Connor', 'grace.oconnor@example.com', 'SARHN-EV-20024', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(8, 5, 1, 'Liam Papadopoulos', 'liam.papadopoulos@example.com', 'SARHN-EV-20025', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(9, 5, 2, 'Mei Chen', 'mei.chen@example.com', 'SARHN-EV-20026', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(1, 6, 4, 'Alice Brown', 'alice@example.com', 'SARHN-EV-20027', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(5, 7, 4, 'Priya Sharma', 'priya.sharma@example.com', 'SARHN-EV-20028', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(6, 7, 3, 'Tom Nguyen', 'tom.nguyen@example.com', 'SARHN-EV-20029', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(7, 7, 2, 'Grace O''Connor', 'grace.oconnor@example.com', 'SARHN-EV-20030', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(8, 7, 1, 'Liam Papadopoulos', 'liam.papadopoulos@example.com', 'SARHN-EV-20031', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(9, 7, 1, 'Mei Chen', 'mei.chen@example.com', 'SARHN-EV-20032', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(1, 8, 2, 'Alice Brown', 'alice@example.com', 'SARHN-EV-20033', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(5, 9, 4, 'Priya Sharma', 'priya.sharma@example.com', 'SARHN-EV-20034', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(6, 9, 3, 'Tom Nguyen', 'tom.nguyen@example.com', 'SARHN-EV-20035', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(7, 9, 2, 'Grace O''Connor', 'grace.oconnor@example.com', 'SARHN-EV-20036', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(8, 9, 1, 'Liam Papadopoulos', 'liam.papadopoulos@example.com', 'SARHN-EV-20037', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(9, 9, 3, 'Mei Chen', 'mei.chen@example.com', 'SARHN-EV-20038', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(10, 9, 4, 'Jack Robertson', 'jack.robertson@example.com', 'SARHN-EV-20039', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(11, 9, 2, 'Sofia Rossi', 'sofia.rossi@example.com', 'SARHN-EV-20040', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(12, 9, 2, 'Noah Williams', 'noah.williams@example.com', 'SARHN-EV-20041', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00'),
+(1, 9, 2, 'Alice Brown', 'alice@example.com', 'SARHN-EV-20042', 'Registered', ((now() AT TIME ZONE 'Australia/Adelaide')::date - 7)::timestamp + time '10:00');
 
 
 -- =========================================================
@@ -256,14 +257,14 @@ VALUES
 INSERT INTO membership
 (user_id, membership_type, application_date, start_date, expiry_date, status, children_covered)
 VALUES
-(2, 'Individual', CURRENT_DATE - 114, CURRENT_DATE - 113, CURRENT_DATE - 113 + INTERVAL '1 year', 'Active', 0),
-(1, 'Individual', CURRENT_DATE - 3, NULL, NULL, 'Pending', 0),
-(5, 'Family', CURRENT_DATE - 200, CURRENT_DATE - 199, CURRENT_DATE - 199 + INTERVAL '1 year', 'Active', 2),
-(6, 'Individual', CURRENT_DATE - 60, CURRENT_DATE - 59, CURRENT_DATE - 59 + INTERVAL '1 year', 'Active', 0),
-(7, 'Family', CURRENT_DATE - 420, CURRENT_DATE - 419, CURRENT_DATE - 54, 'Expired', 3),
-(8, 'Family', CURRENT_DATE - 1, NULL, NULL, 'Pending', 1),
-(9, 'Patron', CURRENT_DATE - 30, CURRENT_DATE - 29, CURRENT_DATE - 29 + INTERVAL '1 year', 'Active', 2),
-(10, 'Individual', CURRENT_DATE - 12, NULL, NULL, 'Rejected', 0);
+(2, 'Individual', (now() AT TIME ZONE 'Australia/Adelaide')::date - 114, (now() AT TIME ZONE 'Australia/Adelaide')::date - 113, (now() AT TIME ZONE 'Australia/Adelaide')::date - 113 + INTERVAL '1 year', 'Active', 0),
+(1, 'Individual', (now() AT TIME ZONE 'Australia/Adelaide')::date - 3, NULL, NULL, 'Pending', 0),
+(5, 'Family', (now() AT TIME ZONE 'Australia/Adelaide')::date - 200, (now() AT TIME ZONE 'Australia/Adelaide')::date - 199, (now() AT TIME ZONE 'Australia/Adelaide')::date - 199 + INTERVAL '1 year', 'Active', 2),
+(6, 'Individual', (now() AT TIME ZONE 'Australia/Adelaide')::date - 60, (now() AT TIME ZONE 'Australia/Adelaide')::date - 59, (now() AT TIME ZONE 'Australia/Adelaide')::date - 59 + INTERVAL '1 year', 'Active', 0),
+(7, 'Family', (now() AT TIME ZONE 'Australia/Adelaide')::date - 420, (now() AT TIME ZONE 'Australia/Adelaide')::date - 419, (now() AT TIME ZONE 'Australia/Adelaide')::date - 54, 'Expired', 3),
+(8, 'Family', (now() AT TIME ZONE 'Australia/Adelaide')::date - 1, NULL, NULL, 'Pending', 1),
+(9, 'Patron', (now() AT TIME ZONE 'Australia/Adelaide')::date - 30, (now() AT TIME ZONE 'Australia/Adelaide')::date - 29, (now() AT TIME ZONE 'Australia/Adelaide')::date - 29 + INTERVAL '1 year', 'Active', 2),
+(10, 'Individual', (now() AT TIME ZONE 'Australia/Adelaide')::date - 12, NULL, NULL, 'Rejected', 0);
 
 
 -- =========================================================
@@ -275,15 +276,15 @@ INSERT INTO booking
 (booking_reference, user_id, visit_date, window_start, window_end, visitor_first_name, visitor_last_name,
  visitor_email, visitor_mobile, accessibility, status, created_at)
 VALUES
-('SARHN-10001', 2, (CURRENT_DATE + 3 + ((8 - EXTRACT(ISODOW FROM CURRENT_DATE + 3)::int) % 7)), '11:00', '13:00', 'Ben', 'Wilson', 'ben@example.com', '0400 000 002', '{}', 'Reserved', now() - INTERVAL '2 days'),
-('SARHN-10002', 2, CURRENT_DATE - 24, '09:00', '11:00', 'Ben', 'Wilson', 'ben@example.com', NULL, '{step_free}', 'Reserved', now() - INTERVAL '30 days'),
-('SARHN-10003', 1, (CURRENT_DATE + 3 + ((8 - EXTRACT(ISODOW FROM CURRENT_DATE + 3)::int) % 7)), '09:00', '11:00', 'Alice', 'Brown', 'alice@example.com', '0400 000 001', '{sensory_backpack}', 'Reserved', now() - INTERVAL '1 day'),
-('SARHN-10004', 5, (CURRENT_DATE + 10 + ((8 - EXTRACT(ISODOW FROM CURRENT_DATE + 10)::int) % 7)), '13:00', '15:00', 'Priya', 'Sharma', 'priya.sharma@example.com', NULL, '{}', 'Reserved', now() - INTERVAL '3 days'),
-('SARHN-10005', 11, (CURRENT_DATE + 3 + ((8 - EXTRACT(ISODOW FROM CURRENT_DATE + 3)::int) % 7)), '13:00', '15:00', 'Sofia', 'Rossi', 'sofia.rossi@example.com', NULL, '{hearing_loop}', 'Cancelled', now() - INTERVAL '4 days'),
+('SARHN-10001', 2, ((now() AT TIME ZONE 'Australia/Adelaide')::date + 3 + ((8 - EXTRACT(ISODOW FROM (now() AT TIME ZONE 'Australia/Adelaide')::date + 3)::int) % 7)), '11:00', '13:00', 'Ben', 'Wilson', 'ben@example.com', '0400 000 002', '{}', 'Reserved', now() - INTERVAL '2 days'),
+('SARHN-10002', 2, (now() AT TIME ZONE 'Australia/Adelaide')::date - 24, '09:00', '11:00', 'Ben', 'Wilson', 'ben@example.com', NULL, '{step_free}', 'Reserved', now() - INTERVAL '30 days'),
+('SARHN-10003', 1, ((now() AT TIME ZONE 'Australia/Adelaide')::date + 3 + ((8 - EXTRACT(ISODOW FROM (now() AT TIME ZONE 'Australia/Adelaide')::date + 3)::int) % 7)), '09:00', '11:00', 'Alice', 'Brown', 'alice@example.com', '0400 000 001', '{sensory_backpack}', 'Reserved', now() - INTERVAL '1 day'),
+('SARHN-10004', 5, ((now() AT TIME ZONE 'Australia/Adelaide')::date + 10 + ((8 - EXTRACT(ISODOW FROM (now() AT TIME ZONE 'Australia/Adelaide')::date + 10)::int) % 7)), '13:00', '15:00', 'Priya', 'Sharma', 'priya.sharma@example.com', NULL, '{}', 'Reserved', now() - INTERVAL '3 days'),
+('SARHN-10005', 11, ((now() AT TIME ZONE 'Australia/Adelaide')::date + 3 + ((8 - EXTRACT(ISODOW FROM (now() AT TIME ZONE 'Australia/Adelaide')::date + 3)::int) % 7)), '13:00', '15:00', 'Sofia', 'Rossi', 'sofia.rossi@example.com', NULL, '{hearing_loop}', 'Cancelled', now() - INTERVAL '4 days'),
 -- Today's arrivals, for the staff check-in screen.
-('SARHN-10006', 6, CURRENT_DATE, '11:00', '13:00', 'Tom', 'Nguyen', 'tom.nguyen@example.com', '0400 000 006', '{}', 'Reserved', now() - INTERVAL '5 days'),
-('SARHN-10007', 12, CURRENT_DATE, '11:00', '13:00', 'Noah', 'Williams', 'noah.williams@example.com', NULL, '{step_free}', 'Reserved', now() - INTERVAL '2 days'),
-('SARHN-10008', 9, CURRENT_DATE, '13:00', '15:00', 'Mei', 'Chen', 'mei.chen@example.com', NULL, '{}', 'Completed', now() - INTERVAL '6 days');
+('SARHN-10006', 6, (now() AT TIME ZONE 'Australia/Adelaide')::date, '11:00', '13:00', 'Tom', 'Nguyen', 'tom.nguyen@example.com', '0400 000 006', '{}', 'Reserved', now() - INTERVAL '5 days'),
+('SARHN-10007', 12, (now() AT TIME ZONE 'Australia/Adelaide')::date, '11:00', '13:00', 'Noah', 'Williams', 'noah.williams@example.com', NULL, '{step_free}', 'Reserved', now() - INTERVAL '2 days'),
+('SARHN-10008', 9, (now() AT TIME ZONE 'Australia/Adelaide')::date, '13:00', '15:00', 'Mei', 'Chen', 'mei.chen@example.com', NULL, '{}', 'Completed', now() - INTERVAL '6 days');
 
 INSERT INTO ticket_reservation
 (booking_id, user_id, ticket_type_id, visit_date, visit_time, ticket_quantity, unit_price, status)

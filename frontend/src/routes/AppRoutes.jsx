@@ -19,6 +19,7 @@ import CheckoutPage from '../pages/booking/CheckoutPage';
 import BookingConfirmationPage from '../pages/booking/BookingConfirmationPage';
 import MembershipPlansPage from '../pages/public/MembershipPlansPage';
 import MembershipStatusPage from '../pages/member/MembershipStatusPage';
+import MembershipCheckoutPage from '../pages/member/MembershipCheckoutPage';
 
 import StaffDashboard from '../pages/staff/StaffDashboard';
 import StaffEventsPage from '../pages/staff/StaffEventsPage';
@@ -65,10 +66,9 @@ export default function AppRoutes() {
 
         <Route path="membership" element={<MembershipPlansPage />} />
 
-        {/* Step 1 is public; steps 2-3 need an account. The contract gates
-            booking at "Member", which Staff and Admin inherit. */}
+        {/* Step 1 is public; steps 2-3 need an account (any signed-in role). */}
         <Route path="book" element={<TicketBookingPage />} />
-        <Route element={<RoleGuard allow={['member', 'staff', 'admin']} />}>
+        <Route element={<RoleGuard allow={['visitor', 'member', 'staff', 'admin']} />}>
           <Route path="book/details" element={<CheckoutPage />} />
           <Route path="book/confirmation/:reference" element={<BookingConfirmationPage />} />
         </Route>
@@ -77,6 +77,7 @@ export default function AppRoutes() {
             A staff account has no membership to show. */}
         <Route element={<RoleGuard allow={['visitor', 'member']} />}>
           <Route path="account" element={<MembershipStatusPage />} />
+          <Route path="membership/checkout" element={<MembershipCheckoutPage />} />
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />
