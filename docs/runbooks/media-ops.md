@@ -561,3 +561,65 @@ Release rule: automatic code publishing does not apply migrations. Check
 pending migrations against a copy of the actual hosted snapshot before
 releasing schema-dependent code; /api/health alone does not prove that
 login or other database queries work.
+
+
+## 14. Schema and media synchronization repair (2026-10-26)
+
+The October snapshot and the migration-only database are different starting
+points. The snapshot already has nullable collection_item.materials
+VARCHAR(200), while migration 009 introduces that column for a fresh setup.
+Do not edit merged migrations, rename/drop the existing column, or overwrite
+live data to make that migration pass.
+
+apply_migrations.sh now renders one migration at a time through
+scripts/lib/migration_sql.py. For 009 only, an existing materials column is
+accepted only when type, length, nullability and default match the reviewed
+snapshot shape. Unexpected shapes abort. The original SQL file stays intact.
+Each migration and its tracker entry run in one transaction under a shared
+advisory lock, with a second version check inside the lock. Failed migrations
+roll back their DDL/data and marker together. SQL generation finishes before
+psql starts. The backend-only ACL policy is applied before each commit.
+
+Read-only release gate:
+
+```bash
+DB_TARGET=staging ./scripts/check_migrations.sh
+```
+
+CI checks the hosted migration versions before publishing dev. Configure the
+existing Render service to After CI Checks Pass (render.yaml: checksPass), so
+backend publishing also waits for successful checks. Missing migrations block
+a release instead of silently deploying schema-dependent code. Migrations
+remain explicit operator actions; this gate does not execute DDL automatically.
+Keep backend changes compatible with the preceding schema during rollout.
+
+Safe schema rollout:
+1. Back up hosted public to a private ignored backup directory.
+2. Restore that backup to disposable PG and apply pending migrations there.
+3. Verify account/role fingerprints, existing row counts, media and replay.
+4. After approval, run DB_TARGET=staging ./scripts/apply_migrations.sh, then
+   the read-only check above. Do not reseed accounts or import a local DB.
+5. Verify real login and the release CI. Account upload remains Harbor's work.
+
+Verification before hosted rollout: all five real PostgreSQL ops cases pass
+(fresh schema, October snapshot preservation, failure rollback/retry,
+incompatible column refusal, two concurrent runners). A clone of the current
+hosted backup upgrades through 011 with unchanged account records, role
+assignments and existing table row counts. All checks pass on replay.
+Tests run in the existing CI PostgreSQL container with separate *_test DBs;
+no production URL is used by those tests.
+
+Media sync uses the existing recovery-backup workflow, DB_TARGET=staging and
+private rclone configuration. The actual guarded nightly_media.sh command
+passed: 13 Supabase/R2/local matching files, zero byte differences. Four
+transport-isolated safety tests check refusal with a local DB, failure before
+transfer when DB lookup fails, preservation of R2 outage uploads, and checks
+against the configured MIRROR_DIR. The latter path is now used consistently.
+
+Scheduling remains controlled by MUSEUM_BACKUP_ENABLED=true at 02:17 Adelaide
+time. Do not claim an active nightly RPO while the variable is absent or jobs
+are skipped. Confirm no payment method or an owner-enforced zero Actions
+paid-overage limit before enabling it, then manually run and verify a cloud
+job and two subsequent scheduled runs. It uses the existing Free runner and
+seven-day artifact retention, with five-minute and 10 MiB per-run bounds.
+No Mac recurring jobs or account-record replication are introduced.
