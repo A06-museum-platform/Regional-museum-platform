@@ -59,9 +59,10 @@ raise SystemExit(subprocess.run([os.environ['OPS_DOCKER_BIN'], 'exec', '-i',
             self.assertEqual(result.returncode, 0, result.stderr)
         return result
 
-    def script(self, name, check=True):
+    def script(self, name, check=True, database=None):
         result = subprocess.run(["bash", str(ROOT / "scripts" / name)], cwd=ROOT,
-                                env=self.env, text=True, capture_output=True)
+                                env=dict(self.env, OPS_DATABASE=database or self.database),
+                                text=True, capture_output=True)
         if check:
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         return result
@@ -95,6 +96,23 @@ raise SystemExit(subprocess.run([os.environ['OPS_DOCKER_BIN'], 'exec', '-i',
         self.assertEqual(self.psql("SELECT count(*) FROM user_account;").stdout, accounts)
         self.script("check_migrations.sh")
         self.script("apply_migrations.sh")
+        # Compare real column shapes, not only version records. Snapshot-only
+        # fields may stay, but every canonical field must exist compatibly.
+        reference = self.database + "_reference_test"
+        self.psql("CREATE DATABASE " + reference, database="postgres")
+        try:
+            self.script("apply_migrations.sh", database=reference)
+            columns = (
+                "SELECT table_name,column_name,data_type,"
+                "coalesce(character_maximum_length::text,''),is_nullable "
+                "FROM information_schema.columns WHERE table_schema='public' "
+                "AND table_name<>'schema_migrations';"
+            )
+            required = set(self.psql(columns, database=reference).stdout.splitlines())
+            actual = set(self.psql(columns).stdout.splitlines())
+            self.assertFalse(required - actual, "Missing/incompatible canonical fields: " + str(required - actual))
+        finally:
+            self.psql("DROP DATABASE " + reference, database="postgres")
 
     def test_failed_migration_rolls_back_ddl_data_and_version(self):
         self.psql("CREATE TABLE schema_migrations(filename text PRIMARY KEY);")
