@@ -523,3 +523,41 @@ publishing step (not the unrelated recovery workflow).
 References: [Cloudflare Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/),
 [CI upload integration](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/),
 and [Render automatic deploys](https://render.com/docs/deploys).
+
+
+## 13. Hosted login repair (2026-10-26)
+
+Symptom: the public Pages site loaded but sign-in displayed Could not reach
+the server. OPTIONS preflight and /health were HTTP 200. The actual login
+POST was HTTP 500 with INTERNAL_ERROR and no Access-Control-Allow-Origin,
+so the browser hid the server response as a fetch network failure.
+
+Root cause: Render had current backend code but hosted Supabase had migration
+versions 001–006 only. Authentication SELECT now reads user_account.is_active,
+introduced by merged migration 007. A successful SELECT 1 readiness probe
+checks connectivity, not whether all release migrations have been applied.
+
+Before repair, a private hosted backup was created in the ignored directory
+backups/login-fix-20261026. Restoring it into a disposable PostgreSQL 17
+verified migration 007 safely adds is_active and preserves existing accounts.
+Migration 008 also passed there, but 009 failed because materials already
+exists in the October snapshot. The disposable container was removed.
+
+Only 007 was applied to hosted staging, together with its schema_migrations
+entry in one transaction. All four existing accounts remain active and the
+existing data was preserved. Later migrations were not blindly applied:
+009 needs a reviewed compatibility plan for this snapshot before a full
+hosted schema rollout. Do not reseed or overwrite live accounts to solve it.
+
+Verification: correct seeded staff credentials → HTTP 200, staff role;
+authenticated /api/auth/me → HTTP 200; wrong password → HTTP 401 AUTH_INVALID.
+All three responses carry the exact Pages origin CORS header. No token or
+password was printed. Additional error-handler regression tests exercise an
+unexpected exception with Pages, localhost, unrelated and absent origins;
+approved origins can read the safe JSON 500, unrelated origins get no CORS
+allowance and internal diagnostics remain absent from the response.
+
+Release rule: automatic code publishing does not apply migrations. Check
+pending migrations against a copy of the actual hosted snapshot before
+releasing schema-dependent code; /api/health alone does not prove that
+login or other database queries work.

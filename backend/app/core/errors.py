@@ -16,6 +16,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.core.config import get_settings
+
 log = logging.getLogger("museum.api")
 
 _STATUS_CODES = {
@@ -79,10 +81,22 @@ async def http_error_handler(_request: Request, exc: StarletteHTTPException) -> 
 
 async def unexpected_error_handler(_request: Request, exc: Exception) -> JSONResponse:
     log.exception("Unhandled error", exc_info=exc)
+    # ServerErrorMiddleware sits outside the normal CORS middleware. Its
+    # responses need the same origin policy or browsers hide this JSON 500
+    # as an unrelated network error.
+    origin = _request.headers.get("origin")
+    headers = {}
+    if origin in {"http://localhost:5173", get_settings().frontend_origin}:
+        headers = {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Vary": "Origin",
+        }
     return JSONResponse(
         status_code=500,
         content={"detail": "Something went wrong on our side. Please try again.",
                  "code": "INTERNAL_ERROR"},
+        headers=headers,
     )
 
 
