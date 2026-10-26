@@ -623,3 +623,26 @@ paid-overage limit before enabling it, then manually run and verify a cloud
 job and two subsequent scheduled runs. It uses the existing Free runner and
 seven-day artifact retention, with five-minute and 10 MiB per-run bounds.
 No Mac recurring jobs or account-record replication are introduced.
+
+
+## 15. Verify snapshot columns as well as migration versions
+
+The final live collections read exposed another legacy-snapshot gap: the
+October dump omitted historical_period VARCHAR(100) and is_highlight BOOLEAN
+NOT NULL DEFAULT FALSE from original migration 001. A schema_migrations row
+and the presence of media_asset cannot prove every original field existed.
+Comparison against a fresh migrated database found exactly these two missing
+canonical columns; all other canonical column types, lengths and nullability
+matched. Snapshot-only discovery_date/display_location/origin_region stay.
+
+Append-only migration 012 adds the two missing fields without replacing or
+reinterpreting existing content. On fresh databases where 001 already created
+them it is a no-op, but mismatched existing definitions raise an error. The
+snapshot ops test now compares every canonical column shape against a fresh
+schema, allowing additional legacy fields. The read-only release gate also
+compiles a zero-row read of the collection columns that previously failed.
+
+Apply 012 after a private backup and clone rehearsal before merging the
+release containing it. Check the real /api/collection-items route with
+page_size=1 (not /api/collections), and public event/exhibition reads. Account
+records and role assignments are outside this correction and stay unchanged.

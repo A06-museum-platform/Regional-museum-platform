@@ -16,4 +16,8 @@ if [ "$missing" != 0 ]; then
   echo "Release blocked: back up, validate and apply pending migrations before deploying." >&2
   exit 1
 fi
+# Version markers alone cannot prove that a legacy snapshot kept the original
+# base columns. Compile the read that previously failed after a version-only check.
+db_psql -v ON_ERROR_STOP=1 -tAc \
+  'SELECT historical_period, is_highlight FROM public.collection_item LIMIT 0;' >/dev/null
 echo "Database migration versions match this release."
