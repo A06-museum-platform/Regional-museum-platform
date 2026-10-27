@@ -120,6 +120,13 @@ chooses **Make staff**.
 Authorisation is enforced **server-side** on every route. The UI hides
 unavailable actions for convenience only — it is not a security boundary.
 
+## Presentation demo
+
+[Watch the Supabase → Cloudflare R2 image failover demo](docs/demos/README.md).
+The captioned recording shows real image requests, automatic fallback after an
+error or ten-second hang, and primary recovery after a reload. Failures are
+simulated only in the recording browser; the API and database remain online.
+
 ## Contributing
 
 See `CONTRIBUTING.md`. In short: branch from `dev`, small commits,

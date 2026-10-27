@@ -1,0 +1,200 @@
+{
+  "recordedAt": "2026-10-27T04:20:17.619Z",
+  "website": "https://regional-museum-platform.pages.dev",
+  "scope": "Browser-only image failure simulation; no provider outage or data writes",
+  "objectKey": "aboriginal-painted-shield.jpg",
+  "durationSeconds": 74.523,
+  "observedTimeoutMs": 10097,
+  "chapters": [
+    {
+      "scene": "intro",
+      "start": 0.001,
+      "caption": "Supabase is the primary image store. R2 holds a mirrored copy with the same object key."
+    },
+    {
+      "scene": "normal",
+      "start": 10.223,
+      "caption": "The real API supplies a Supabase URL. The browser loads the primary image successfully."
+    },
+    {
+      "scene": "blocked",
+      "start": 21.175,
+      "caption": "Only this browser blocks Supabase image requests. The application automatically retries the same object in R2."
+    },
+    {
+      "scene": "hanging",
+      "start": 34.336,
+      "caption": "No immediate error: the 10-second image deadline triggers the same R2 fallback automatically."
+    },
+    {
+      "scene": "recovered",
+      "start": 53.504,
+      "caption": "Remove the browser block and reload. A fresh image load uses Supabase again."
+    },
+    {
+      "scene": "outro",
+      "start": 64.486,
+      "caption": "Automatic image-read fallback works. The database and API remain online throughout this simulation."
+    }
+  ],
+  "events": [
+    {
+      "at": 1.5,
+      "scene": "intro",
+      "source": "primary",
+      "event": "request",
+      "url": "https://jrgyhvfpgppoarxwqhmk.supabase.co/storage/v1/object/public/museum-media/aboriginal-painted-shield.jpg"
+    },
+    {
+      "at": 2.07,
+      "scene": "intro",
+      "source": "primary",
+      "event": "response",
+      "status": 200
+    },
+    {
+      "at": 2.097,
+      "scene": "intro",
+      "source": "primary",
+      "event": "rendered-and-decoded"
+    },
+    {
+      "at": 11.122,
+      "scene": "normal",
+      "source": "primary",
+      "event": "request",
+      "url": "https://jrgyhvfpgppoarxwqhmk.supabase.co/storage/v1/object/public/museum-media/aboriginal-painted-shield.jpg"
+    },
+    {
+      "at": 11.146,
+      "scene": "normal",
+      "source": "primary",
+      "event": "response",
+      "status": 200
+    },
+    {
+      "at": 11.171,
+      "scene": "normal",
+      "source": "primary",
+      "event": "rendered-and-decoded"
+    },
+    {
+      "at": 22.06,
+      "scene": "blocked",
+      "source": "primary",
+      "event": "request",
+      "url": "https://jrgyhvfpgppoarxwqhmk.supabase.co/storage/v1/object/public/museum-media/aboriginal-painted-shield.jpg"
+    },
+    {
+      "at": 22.062,
+      "scene": "blocked",
+      "source": "primary",
+      "event": "browser-request-failed",
+      "reason": "net::ERR_FAILED"
+    },
+    {
+      "at": 22.062,
+      "scene": "blocked",
+      "source": "r2",
+      "event": "request",
+      "url": "https://pub-5f79a37728b6418db375cb056ccdd868.r2.dev/aboriginal-painted-shield.jpg"
+    },
+    {
+      "at": 22.184,
+      "scene": "blocked",
+      "source": "r2",
+      "event": "response",
+      "status": 200
+    },
+    {
+      "at": 22.212,
+      "scene": "blocked",
+      "source": "r2",
+      "event": "rendered-and-decoded"
+    },
+    {
+      "at": 35.36,
+      "scene": "hanging",
+      "source": "primary",
+      "event": "request",
+      "url": "https://jrgyhvfpgppoarxwqhmk.supabase.co/storage/v1/object/public/museum-media/aboriginal-painted-shield.jpg"
+    },
+    {
+      "at": 45.363,
+      "scene": "hanging",
+      "source": "r2",
+      "event": "request",
+      "url": "https://pub-5f79a37728b6418db375cb056ccdd868.r2.dev/aboriginal-painted-shield.jpg"
+    },
+    {
+      "at": 45.429,
+      "scene": "hanging",
+      "source": "r2",
+      "event": "response",
+      "status": 200
+    },
+    {
+      "at": 45.457,
+      "scene": "hanging",
+      "source": "r2",
+      "event": "rendered-and-decoded"
+    },
+    {
+      "at": 54.38,
+      "scene": "recovered",
+      "source": "primary",
+      "event": "request",
+      "url": "https://jrgyhvfpgppoarxwqhmk.supabase.co/storage/v1/object/public/museum-media/aboriginal-painted-shield.jpg"
+    },
+    {
+      "at": 54.403,
+      "scene": "recovered",
+      "source": "primary",
+      "event": "response",
+      "status": 200
+    },
+    {
+      "at": 54.442,
+      "scene": "recovered",
+      "source": "primary",
+      "event": "rendered-and-decoded"
+    },
+    {
+      "at": 65.417,
+      "scene": "outro",
+      "source": "primary",
+      "event": "request",
+      "url": "https://jrgyhvfpgppoarxwqhmk.supabase.co/storage/v1/object/public/museum-media/aboriginal-painted-shield.jpg"
+    },
+    {
+      "at": 65.451,
+      "scene": "outro",
+      "source": "primary",
+      "event": "response",
+      "status": 200
+    },
+    {
+      "at": 65.47,
+      "scene": "outro",
+      "source": "primary",
+      "event": "rendered-and-decoded"
+    }
+  ],
+  "pageErrors": [],
+  "video": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "width": 1920,
+        "height": 1080,
+        "r_frame_rate": "25/1"
+      }
+    ],
+    "format": {
+      "duration": "75.560000",
+      "size": "3386529"
+    }
+  }
+}
