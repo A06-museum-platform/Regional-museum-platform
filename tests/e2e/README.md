@@ -32,3 +32,27 @@ E2E_BASE_URL=https://staging.example.org ./tests/e2e/run_all.sh
 
 The flows change data (bookings, registrations, roles), so reload the seed
 before running the suite a second time.
+
+## Isolated image fallback drill
+
+`media_fallback.mjs` drives the real `MediaImage` component using a development-only
+fixture, with storage requests intercepted in a fresh Chromium context. It does
+not log in, change cloud data, or require storage credentials. Unlike the flows
+above, no database reset is needed. The Node Playwright package and its Chromium
+browser must already be available.
+
+```bash
+# Terminal 1, from frontend/: public storage URL configuration only
+npm run dev -- --mode production --host 127.0.0.1 --port 5179 --strictPort
+
+# Terminal 2, from the repository root
+E2E_BASE_URL=http://127.0.0.1:5179 node tests/e2e/media_fallback.mjs
+```
+
+If Playwright is installed outside the repo, set `PLAYWRIGHT_MODULE_PATH` to its
+absolute `index.mjs`. `PLAYWRIGHT_EXECUTABLE_PATH` can select an existing Chromium.
+The eight scenarios cover healthy primary reads, primary errors and hangs, both
+providers failing or hanging, offscreen lazy loading, a changed source after
+failure, and card-placeholder behavior. Tests advance the browser clock instead
+of waiting ten real seconds per attempt. The fixture is not a production build
+entry point.
