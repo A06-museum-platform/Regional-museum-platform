@@ -395,10 +395,23 @@ The Pages build needs only public values: VITE_SUPABASE_URL,
 VITE_SUPABASE_BUCKET=museum-media, and VITE_R2_PUBLIC_BASE. MediaImage maps
 only this project/bucket's public image URLs to the same object key in R2.
 A primary load error triggers one R2 attempt; a second error shows Image
-unavailable. Loading another source resets the attempt. Foreign/local/R2
+unavailable. For mirrored images, each attempt also has a ten-second limit so a
+connection that hangs without an error cannot block fallback indefinitely. A
+successful image remains visible after that limit; offscreen lazy images begin
+their limit only when entering the viewport. Loading another source resets the attempt. Foreign/local/R2
 URLs never redirect. This changes browser reads, not DB rows or upload mode.
 The reusable component is used in the real staff Media library; unfinished
 business pages still need their normal API/image integration.
+
+Public media association check (2026-10-27): the deployed real API returns four
+published exhibitions and twelve published collection items, all with null image
+fields. The only media_asset row belongs to unpublished test exhibition 6.
+Fourteen bucket objects were verified equal by scheduled recovery run
+40398494000, but bucket contents alone do not establish which public record owns
+an image. Link or upload only team-approved pictures to the correct owner through
+the staff media workflow, then verify the public API URL and matching R2 copy.
+Do not invent associations from numeric IDs or reuse unrelated legacy photos.
+See tests/e2e/README.md for the isolated real-component browser fallback drill.
 
 Cloud sync setup: PR #16 is merged, so R2 outage safeguards are on default
 dev. Both repository Secrets have been configured and verified by name at
