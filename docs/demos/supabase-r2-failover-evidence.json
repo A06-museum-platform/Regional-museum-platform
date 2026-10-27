@@ -1,186 +1,193 @@
 {
-  "recordedAt": "2026-10-27T04:20:17.619Z",
+  "recordedAt": "2026-10-27T07:57:45.234Z",
   "website": "https://regional-museum-platform.pages.dev",
   "scope": "Browser-only image failure simulation; no provider outage or data writes",
   "objectKey": "aboriginal-painted-shield.jpg",
-  "durationSeconds": 74.523,
-  "observedTimeoutMs": 10097,
+  "durationSeconds": 86.857,
+  "observedTimeoutMs": 10105,
   "chapters": [
     {
       "scene": "intro",
-      "start": 0.001,
-      "caption": "Supabase is the primary image store. R2 holds a mirrored copy with the same object key."
+      "start": 0,
+      "caption": "Supabase serves the primary image.\nR2 holds a copy with the same file key."
     },
     {
       "scene": "normal",
-      "start": 10.223,
-      "caption": "The real API supplies a Supabase URL. The browser loads the primary image successfully."
+      "start": 11.611,
+      "caption": "The API returns a Supabase URL.\nThe browser loads the primary image."
     },
     {
       "scene": "blocked",
-      "start": 21.175,
-      "caption": "Only this browser blocks Supabase image requests. The application automatically retries the same object in R2."
+      "start": 24.823,
+      "caption": "Supabase images are blocked in this browser.\nThe app automatically loads the R2 copy."
     },
     {
       "scene": "hanging",
-      "start": 34.336,
-      "caption": "No immediate error: the 10-second image deadline triggers the same R2 fallback automatically."
+      "start": 39.991,
+      "caption": "This image request is held open.\nAfter 10 seconds, the app switches to R2."
     },
     {
       "scene": "recovered",
-      "start": 53.504,
-      "caption": "Remove the browser block and reload. A fresh image load uses Supabase again."
+      "start": 60.194,
+      "caption": "Remove the browser block and reload.\nThe image loads from Supabase again."
     },
     {
       "scene": "outro",
-      "start": 64.486,
-      "caption": "Automatic image-read fallback works. The database and API remain online throughout this simulation."
+      "start": 73.726,
+      "caption": "Only image requests were interrupted.\nThe database and API stayed online."
     }
   ],
   "events": [
     {
-      "at": 1.5,
+      "at": 1.14,
       "scene": "intro",
       "source": "primary",
       "event": "request",
       "url": "https://jrgyhvfpgppoarxwqhmk.supabase.co/storage/v1/object/public/museum-media/aboriginal-painted-shield.jpg"
     },
     {
-      "at": 2.07,
+      "at": 1.508,
       "scene": "intro",
       "source": "primary",
       "event": "response",
       "status": 200
     },
     {
-      "at": 2.097,
+      "at": 1.535,
       "scene": "intro",
       "source": "primary",
       "event": "rendered-and-decoded"
     },
     {
-      "at": 11.122,
+      "at": 12.582,
       "scene": "normal",
       "source": "primary",
       "event": "request",
       "url": "https://jrgyhvfpgppoarxwqhmk.supabase.co/storage/v1/object/public/museum-media/aboriginal-painted-shield.jpg"
     },
     {
-      "at": 11.146,
+      "at": 12.615,
       "scene": "normal",
       "source": "primary",
       "event": "response",
       "status": 200
     },
     {
-      "at": 11.171,
+      "at": 12.639,
       "scene": "normal",
       "source": "primary",
       "event": "rendered-and-decoded"
     },
     {
-      "at": 22.06,
+      "at": 25.728,
       "scene": "blocked",
       "source": "primary",
       "event": "request",
       "url": "https://jrgyhvfpgppoarxwqhmk.supabase.co/storage/v1/object/public/museum-media/aboriginal-painted-shield.jpg"
     },
     {
-      "at": 22.062,
+      "at": 25.731,
       "scene": "blocked",
       "source": "primary",
       "event": "browser-request-failed",
       "reason": "net::ERR_FAILED"
     },
     {
-      "at": 22.062,
+      "at": 25.732,
       "scene": "blocked",
       "source": "r2",
       "event": "request",
       "url": "https://pub-5f79a37728b6418db375cb056ccdd868.r2.dev/aboriginal-painted-shield.jpg"
     },
     {
-      "at": 22.184,
+      "at": 25.875,
       "scene": "blocked",
       "source": "r2",
       "event": "response",
       "status": 200
     },
     {
-      "at": 22.212,
+      "at": 25.908,
       "scene": "blocked",
       "source": "r2",
       "event": "rendered-and-decoded"
     },
     {
-      "at": 35.36,
+      "at": 40.996,
       "scene": "hanging",
       "source": "primary",
       "event": "request",
       "url": "https://jrgyhvfpgppoarxwqhmk.supabase.co/storage/v1/object/public/museum-media/aboriginal-painted-shield.jpg"
     },
     {
-      "at": 45.363,
+      "at": 51,
       "scene": "hanging",
       "source": "r2",
       "event": "request",
       "url": "https://pub-5f79a37728b6418db375cb056ccdd868.r2.dev/aboriginal-painted-shield.jpg"
     },
     {
-      "at": 45.429,
+      "at": 51.067,
       "scene": "hanging",
       "source": "r2",
       "event": "response",
       "status": 200
     },
     {
-      "at": 45.457,
+      "at": 51.101,
       "scene": "hanging",
       "source": "r2",
       "event": "rendered-and-decoded"
     },
     {
-      "at": 54.38,
+      "at": 61.091,
       "scene": "recovered",
       "source": "primary",
       "event": "request",
       "url": "https://jrgyhvfpgppoarxwqhmk.supabase.co/storage/v1/object/public/museum-media/aboriginal-painted-shield.jpg"
     },
     {
-      "at": 54.403,
+      "at": 61.689,
       "scene": "recovered",
       "source": "primary",
       "event": "response",
       "status": 200
     },
     {
-      "at": 54.442,
+      "at": 61.719,
       "scene": "recovered",
       "source": "primary",
       "event": "rendered-and-decoded"
     },
     {
-      "at": 65.417,
+      "at": 74.652,
       "scene": "outro",
       "source": "primary",
       "event": "request",
       "url": "https://jrgyhvfpgppoarxwqhmk.supabase.co/storage/v1/object/public/museum-media/aboriginal-painted-shield.jpg"
     },
     {
-      "at": 65.451,
+      "at": 74.727,
       "scene": "outro",
       "source": "primary",
       "event": "response",
       "status": 200
     },
     {
-      "at": 65.47,
+      "at": 74.796,
       "scene": "outro",
       "source": "primary",
       "event": "rendered-and-decoded"
     }
   ],
   "pageErrors": [],
+  "presentation": {
+    "capture": "1280x720",
+    "output": "1920x1080",
+    "captionPixels": 36,
+    "statusPixels": 36,
+    "focusedLiveView": true
+  },
   "video": {
     "programs": [],
     "stream_groups": [],
@@ -193,8 +200,8 @@
       }
     ],
     "format": {
-      "duration": "75.560000",
-      "size": "3386529"
+      "duration": "87.920000",
+      "size": "4432901"
     }
   }
 }

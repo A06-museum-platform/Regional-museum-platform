@@ -18,12 +18,12 @@ const primary = `${primaryOrigin}/storage/v1/object/public/museum-media/${object
 const standby = `${r2Origin}/${objectKey}`;
 const title = 'Aboriginal Painted Shield';
 const scenes = {
-  intro: ['THE MECHANISM', 'Supabase is the primary image store. R2 holds a mirrored copy with the same object key.'],
-  normal: ['01 · NORMAL READ', 'The real API supplies a Supabase URL. The browser loads the primary image successfully.'],
-  blocked: ['02 · IMAGE REQUEST FAILS', 'Only this browser blocks Supabase image requests. The application automatically retries the same object in R2.'],
-  hanging: ['03 · PRIMARY REQUEST HANGS', 'No immediate error: the 10-second image deadline triggers the same R2 fallback automatically.'],
-  recovered: ['04 · PRIMARY RESTORED', 'Remove the browser block and reload. A fresh image load uses Supabase again.'],
-  outro: ['WHAT THE DEMO PROVES', 'Automatic image-read fallback works. The database and API remain online throughout this simulation.'],
+  intro: ['THE MECHANISM', 'Supabase serves the primary image.\nR2 holds a copy with the same file key.'],
+  normal: ['01 · NORMAL READ', 'The API returns a Supabase URL.\nThe browser loads the primary image.'],
+  blocked: ['02 · IMAGE REQUEST FAILS', 'Supabase images are blocked in this browser.\nThe app automatically loads the R2 copy.'],
+  hanging: ['03 · PRIMARY REQUEST HANGS', 'This image request is held open.\nAfter 10 seconds, the app switches to R2.'],
+  recovered: ['04 · PRIMARY RESTORED', 'Remove the browser block and reload.\nThe image loads from Supabase again.'],
+  outro: ['WHAT THE DEMO PROVES', 'Only image requests were interrupted.\nThe database and API stayed online.'],
 };
 const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH || undefined });
 const events = [];
@@ -39,8 +39,22 @@ let hangElapsed = 0;
 let videoPath;
 const seconds = () => (Date.now() - started) / 1000;
 try {
-  context = await browser.newContext({ viewport: { width: 1920, height: 1080 },
-    recordVideo: { dir: work, size: { width: 1920, height: 1080 } }, reducedMotion: 'reduce' });
+  // Wake a sleeping free-tier API before starting the video, so a hosting cold
+  // start does not leave the presentation on its opening slide for a minute.
+  const warmup = await browser.newContext();
+  try {
+    const api = process.env.API_BASE_URL || 'https://regional-museum-platform-api.onrender.com/api';
+    const response = await warmup.request.get(`${api}/collection-items/aboriginal-painted-shield-6`, { timeout: 120000 });
+    assert.ok(response.ok(), `Public demo record unavailable: HTTP ${response.status()}`);
+    const item = await response.json();
+    assert.equal(item.image_url, primary, 'Demo record must retain its real Supabase image URL');
+  } finally {
+    await warmup.close();
+  }
+  // Capture a tighter 720p composition and export to 1080p. Important text is
+  // 22–24 CSS px here (33–36 px in the final video), not tiny full-page text.
+  context = await browser.newContext({ viewport: { width: 1280, height: 720 },
+    recordVideo: { dir: work, size: { width: 1280, height: 720 } }, reducedMotion: 'reduce' });
   // Read-only guard. A fresh context has no cookies, storage or signed-in user.
   await context.route('**/api/**', route => ['GET', 'HEAD'].includes(route.request().method())
     ? route.continue() : route.abort());
@@ -55,37 +69,46 @@ try {
       const [heading, caption] = scenes[key];
       const style = document.createElement('style');
       style.textContent = `
-        body { padding-right: 450px !important; padding-bottom: 170px !important; }
-        #demo-rail { position:fixed;right:0;top:0;bottom:0;width:450px;box-sizing:border-box;
-          background:#15251f;color:#f7faf7;padding:36px 28px;z-index:2147483646;font:18px/1.5 system-ui; }
-        #demo-rail .tag {color:#b9d97e;font-size:13px;letter-spacing:2px;font-weight:700;}
-        #demo-rail h2 {font:600 30px/1.2 system-ui;margin:12px 0 26px;}
-        .demo-box {border:1px solid #4b6255;border-radius:14px;padding:20px;margin:18px 0;background:#1e342a;}
-        .demo-label {font-weight:650;font-size:20px;}.demo-url {font:13px/1.5 monospace;color:#c3cec7;overflow-wrap:anywhere;margin:10px 0;}
-        .demo-state {font-size:18px;color:#d7dcca;min-height:28px;}
-        #demo-object {font:15px/1.6 monospace;overflow-wrap:anywhere;color:#d4e7ae;}
-        #demo-rendered {font-size:20px;font-weight:700;color:#b9df85;}
-        #demo-caption {position:fixed;left:0;right:450px;bottom:0;box-sizing:border-box;background:#102019;
-          color:white;padding:25px 46px;min-height:142px;z-index:2147483647;font:26px/1.42 system-ui;}
-        #demo-caption b {display:block;font-size:14px;letter-spacing:2px;color:#b9d97e;margin-bottom:10px;}
-        #demo-scope {position:absolute;bottom:28px;left:28px;right:28px;font-size:15px;color:#c9d2cc;border-top:1px solid #4b6255;padding-top:20px;}
-        #demo-cover {position:fixed;left:0;top:0;right:450px;bottom:142px;background:#f4f6ed;
-          z-index:2147483645;padding:130px 90px;box-sizing:border-box;color:#213426;font:24px/1.6 system-ui;}
-        #demo-cover h1 {font:700 61px/1.15 system-ui;letter-spacing:-2px;margin:20px 0 32px;color:#213426;}
-        #demo-cover .eyebrow {font-size:16px;letter-spacing:3px;font-weight:700;color:#526b32;}
-        #demo-cover .flow {display:flex;align-items:center;gap:25px;margin:45px 0;font-size:23px;}
-        #demo-cover .node {padding:24px 30px;border:1px solid #9eaf84;border-radius:16px;background:#fff;}
-        #demo-cover small {display:block;color:#58654c;font-size:18px;margin-top:40px;}
+        body { padding-right:400px !important;padding-bottom:150px !important; }
+        #root header,#root footer,#root nav,#root table,#root [class*="related"],
+        #root [class*="actions"],#root [class*="pills"] { display:none !important; }
+        #root main { padding:24px 32px !important;max-width:none !important; }
+        .demo-live-layout { display:flex !important;flex-direction:column !important;gap:12px !important; }
+        .demo-live-layout > div:first-child { height:320px !important;width:100% !important; }
+        .demo-live-layout h1 { font-size:25px !important;line-height:1.2 !important;margin:0 0 8px !important; }
+        .demo-live-layout p { font-size:18px !important;line-height:1.4 !important;max-width:none !important;margin:0 !important; }
+        #demo-rail { position:fixed;right:0;top:0;bottom:0;width:400px;box-sizing:border-box;
+          background:#15251f;color:#f7faf7;padding:22px;z-index:2147483646;font:20px/1.35 system-ui; }
+        #demo-rail .tag {color:#b9d97e;font-size:13px;letter-spacing:1px;font-weight:700;}
+        #demo-rail h2 {font:600 29px/1.15 system-ui;margin:10px 0 18px;}
+        .demo-box {border:1px solid #4b6255;border-radius:12px;padding:14px;margin:12px 0;background:#1e342a;}
+        .demo-label {font-weight:650;font-size:23px;}.demo-url {display:none;}
+        .demo-state {font-size:24px;color:#d7dcca;min-height:30px;margin-top:10px;}
+        #demo-object {font:18px/1.4 monospace;overflow-wrap:anywhere;color:#d4e7ae;margin-top:10px;}
+        #demo-rendered {font-size:24px;font-weight:700;color:#b9df85;}
+        #demo-caption {position:fixed;left:0;right:400px;bottom:0;box-sizing:border-box;background:#102019;
+          color:white;padding:18px 28px;min-height:132px;z-index:2147483647;font:24px/1.35 system-ui;}
+        #demo-caption span {white-space:pre-line;}
+        #demo-caption b {display:block;font-size:17px;letter-spacing:1px;color:#b9d97e;margin-bottom:8px;}
+        #demo-scope {position:absolute;bottom:20px;left:22px;right:22px;font-size:17px;line-height:1.4;color:#c9d2cc;border-top:1px solid #4b6255;padding-top:14px;}
+        #demo-cover {position:fixed;left:0;top:0;right:400px;bottom:132px;background:#f4f6ed;
+          z-index:2147483645;padding:48px 40px;box-sizing:border-box;color:#213426;font:23px/1.45 system-ui;}
+        #demo-cover h1 {font:700 43px/1.12 system-ui;letter-spacing:-1px;margin:18px 0 24px;color:#213426;}
+        #demo-cover p {font-size:22px;line-height:1.45;margin:12px 0;}
+        #demo-cover .eyebrow {font-size:16px;letter-spacing:1px;font-weight:700;color:#526b32;}
+        #demo-cover .flow {display:flex;align-items:center;gap:16px;margin:25px 0;font-size:22px;}
+        #demo-cover .node {padding:16px;border:1px solid #9eaf84;border-radius:12px;background:#fff;}
+        #demo-cover small {display:block;color:#46523e;font-size:19px;margin-top:24px;}
       `;
       document.head.append(style);
       const rail = document.createElement('aside');
       rail.id = 'demo-rail';
-      rail.innerHTML = `<div class="tag">PRESENTATION OVERLAY · LIVE NETWORK</div><h2>One image.<br>Two storage sources.</h2>
+      rail.innerHTML = `<div class="tag">PRESENTATION VIEW · LIVE REQUESTS</div><h2>One image.<br>Two sources.</h2>
         <div class="demo-box"><div class="demo-label">1 · Supabase primary</div><div class="demo-url">jrgyhvfpgppoarxwqhmk.supabase.co</div><div id="demo-primary" class="demo-state">Waiting for request…</div></div>
-        <div style="text-align:center;color:#b9d97e">on error / 10-second deadline ↓</div>
+        <div style="text-align:center;color:#b9d97e;font-size:20px">Error or 10s timeout ↓</div>
         <div class="demo-box"><div class="demo-label">2 · Cloudflare R2 backup</div><div class="demo-url">pub-5f79a37728b6418db375cb056ccdd868.r2.dev</div><div id="demo-r2" class="demo-state">Standby · no request yet</div></div>
-        <div class="demo-box"><div class="demo-label">Same object key</div><div id="demo-object"></div><hr style="border:0;border-top:1px solid #4b6255;margin:18px 0"><div style="font-size:14px">ACTUAL RENDERED IMAGE SOURCE</div><div id="demo-rendered">Waiting for image…</div></div>
-        <div id="demo-scope">Browser-only failure simulation.<br>Database + API stay online.<br>No cloud configuration is changed.</div>`;
+        <div class="demo-box"><div class="demo-label">Same file key</div><div id="demo-object"></div><hr style="border:0;border-top:1px solid #4b6255;margin:14px 0"><div style="font-size:17px;margin-bottom:8px">IMAGE LOADED FROM</div><div id="demo-rendered">Waiting for image…</div></div>
+        <div id="demo-scope">Browser-only simulation.<br>Database + API stay online.</div>`;
       document.body.append(rail);
       document.getElementById('demo-object').textContent = objectKey;
       const lower = document.createElement('div');lower.id = 'demo-caption';
@@ -95,8 +118,8 @@ try {
       if (key === 'intro' || key === 'outro') {
         const cover = document.createElement('div');cover.id = 'demo-cover';
         cover.innerHTML = key === 'intro'
-          ? `<div class="eyebrow">REGIONAL MUSEUM PLATFORM · LIVE DEMO</div><h1>Supabase image failover<br>with Cloudflare R2</h1><p>Keep a museum image visible when its primary storage request fails.</p><div class="flow"><div class="node">Supabase Storage<br><small style="margin:0">Primary image URL</small></div><span>→</span><div class="node">Browser image</div><span>←</span><div class="node">Cloudflare R2<br><small style="margin:0">Mirrored object key</small></div></div><small>Recorded on the deployed website. Captions and this network panel are presentation overlays.</small>`
-          : `<div class="eyebrow">VERIFIED ON THE DEPLOYED APPLICATION</div><h1>Automatic image fallback.<br>No manual URL rewrite.</h1><p>✓ Primary request error → matching R2 object<br>✓ Primary request hangs → 10-second deadline → R2<br>✓ Unblock and reload → Supabase primary</p><small>Requires an existing R2 copy. Daily synchronization is not instant replication.<br>This is image-read resilience, not PostgreSQL or upload failover.</small>`;
+          ? `<div class="eyebrow">REGIONAL MUSEUM PLATFORM · LIVE DEMO</div><h1>Supabase image failover<br>with Cloudflare R2</h1><p>A backup source for museum images.</p><div class="flow"><div class="node">Supabase<br><small style="margin:0">Primary</small></div><span>→</span><div class="node">Browser</div><span>←</span><div class="node">Cloudflare R2<br><small style="margin:0">Backup copy</small></div></div><small>Real deployed app. Presentation overlays explain the requests.</small>`
+          : `<div class="eyebrow">VERIFIED ON THE LIVE WEBSITE</div><h1>Automatic fallback.<br>No manual URL change.</h1><p>✓ Image error → R2 copy<br>✓ Request hangs → 10s timeout → R2<br>✓ Unblock + reload → Supabase</p><small>R2 needs an existing mirrored copy.<br>Daily sync is not instant replication.<br>Database and upload recovery are separate.</small>`;
         document.body.append(cover);
       }
       window.__demoUpdate = ({ source, text, ok }) => {
@@ -105,6 +128,8 @@ try {
       };
       setInterval(() => {
         const img = [...document.images].find(img => img.alt === title);
+        // Focus only this recording's view; the deployed site's CSS is untouched.
+        img?.parentElement?.parentElement?.classList.add('demo-live-layout');
         const el = document.getElementById('demo-rendered');
         el.textContent = img?.complete && img.naturalWidth > 0
           ? (img.dataset.mediaFallback === 'true' ? 'Cloudflare R2 · loaded' : 'Supabase · loaded') : 'Image loading…';
@@ -122,12 +147,12 @@ try {
     const source = request.url() === primary ? 'primary' : 'r2';
     if (source === 'primary') requestStarted = Date.now();
     events.push({ at: seconds(), scene, source, event: 'request', url: request.url() });
-    void update(source, source === 'primary' && mode === 'hanging' ? 'Pending · waiting for 10s deadline…' : 'GET image · requested');
+    void update(source, source === 'primary' && mode === 'hanging' ? 'Waiting · 10s timeout' : 'Image requested…');
   });
   page.on('requestfailed', request => {
     if (request.url() !== primary) return;
     events.push({ at: seconds(), scene, source: 'primary', event: 'browser-request-failed', reason: request.failure()?.errorText });
-    void update('primary', mode === 'hanging' ? '10s deadline · switched to R2' : 'Blocked in this demo browser');
+    void update('primary', mode === 'hanging' ? '10s timeout → R2' : 'Blocked (demo)');
   });
   page.on('response', response => {
     if (response.url() !== primary && response.url() !== standby) return;
@@ -153,23 +178,36 @@ try {
     if (source === 'r2' && mode === 'hanging') {
       hangElapsed = Date.now() - requestStarted;
       assert.ok(hangElapsed >= 9500 && hangElapsed < 20000, `Unexpected deadline: ${hangElapsed}ms`);
-      await update('primary', '10s deadline · switched to R2');
+      await update('primary', '10s timeout → R2');
     }
     if (source === 'r2' && mode === 'blocked') {
       assert.ok(events.some(event => event.scene === scene && event.source === 'primary' && event.event === 'browser-request-failed'));
-      await update('primary', 'Blocked in this demo browser');
+      await update('primary', 'Blocked (demo)');
     }
-    await update(source, 'HTTP 200 · image loaded', true);
+    await update(source, 'HTTP 200 · loaded', true);
     await page.waitForFunction(label => document.getElementById('demo-rendered')?.textContent.includes(label),
       source === 'r2' ? 'Cloudflare R2 · loaded' : 'Supabase · loaded');
+    const readable = await page.evaluate(() => {
+      const caption = document.getElementById('demo-caption');
+      const scope = document.getElementById('demo-scope');
+      const boxes = [...document.querySelectorAll('.demo-box')];
+      const cover = document.getElementById('demo-cover');
+      return {
+        captionFits: caption.scrollHeight <= caption.clientHeight,
+        railFits: boxes.every(box => box.getBoundingClientRect().bottom <= scope.getBoundingClientRect().top - 4),
+        coverFits: !cover || cover.scrollHeight <= cover.clientHeight,
+      };
+    });
+    assert.ok(Object.values(readable).every(Boolean), `Presentation text overflow: ${JSON.stringify(readable)}`);
   };
-  await goto('intro');await imageLoaded('primary');await page.waitForTimeout(8000);
-  await goto('normal');await imageLoaded('primary');await page.waitForTimeout(10000);
+  await goto('intro');await imageLoaded('primary');await page.waitForTimeout(10000);
+  await goto('normal');await imageLoaded('primary');
+  await page.screenshot({ path: join(work, 'normal-readable.png') });await page.waitForTimeout(12000);
   mode = 'blocked';await goto('blocked');await imageLoaded('r2');
-  await page.screenshot({ path: join(work, 'r2-fallback.png') });await page.waitForTimeout(12000);
-  mode = 'hanging';await goto('hanging');await imageLoaded('r2');await page.waitForTimeout(8000);
-  mode = 'normal';await goto('recovered');await imageLoaded('primary');await page.waitForTimeout(10000);
-  await goto('outro');await imageLoaded('primary');await page.waitForTimeout(9000);
+  await page.screenshot({ path: join(work, 'r2-fallback.png') });await page.waitForTimeout(14000);
+  mode = 'hanging';await goto('hanging');await imageLoaded('r2');await page.waitForTimeout(9000);
+  mode = 'normal';await goto('recovered');await imageLoaded('primary');await page.waitForTimeout(12000);
+  await goto('outro');await imageLoaded('primary');await page.waitForTimeout(12000);
   assert.deepEqual(pageErrors, []);
   await page.screenshot({ path: join(work, 'outro.png') });
   const duration = seconds();
@@ -177,10 +215,11 @@ try {
   const evidence = {
     recordedAt: new Date().toISOString(), website: base, scope: 'Browser-only image failure simulation; no provider outage or data writes',
     objectKey, durationSeconds: duration, observedTimeoutMs: hangElapsed, chapters, events, pageErrors,
+    presentation: { capture: '1280x720', output: '1920x1080', captionPixels: 36, statusPixels: 36, focusedLiveView: true },
   };
   await writeFile(join(output, 'supabase-r2-failover-evidence.json'), JSON.stringify(evidence, null, 2) + '\n');
   execFileSync(process.env.FFMPEG_BIN || 'ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-i', videoPath,
-    '-c:v', 'libx264', '-preset', 'medium', '-crf', '22', '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
+    '-vf', 'scale=1920:1080:flags=lanczos', '-c:v', 'libx264', '-preset', 'medium', '-crf', '22', '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
     '-an', join(output, 'supabase-r2-failover.mp4')]);
   const posterAt = events.find(event => event.scene === 'blocked' && event.event === 'rendered-and-decoded').at + 2;
   execFileSync(process.env.FFMPEG_BIN || 'ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-ss', String(posterAt),
