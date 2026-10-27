@@ -17,7 +17,10 @@
 .image {
   height: 340px;
   border-radius: var(--radius);
+  overflow: hidden;
 }
+
+.photo { width: 100%; height: 100%; object-fit: contain; display: block; }
 
 .pills { display: flex; gap: var(--s-2); margin-bottom: var(--s-3); }
 

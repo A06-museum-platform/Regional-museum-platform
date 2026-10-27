@@ -56,3 +56,25 @@ providers failing or hanging, offscreen lazy loading, a changed source after
 failure, and card-placeholder behavior. Tests advance the browser clock instead
 of waiting ten real seconds per attempt. The fixture is not a production build
 entry point.
+
+## Public catalog photo checks
+
+After the original snapshot catalog and current catalog are both published,
+`catalog_media.mjs` reads the real public API and tests the collection detail
+page. It checks correct photos, a missing classification, browser-only Supabase
+blocking and R2 fallback, an escaped filename, both providers failing, and the
+current catalog's existing no-photo placeholder. It never changes cloud data.
+It uses the same Node Playwright setup and optional executable/module overrides
+as the isolated drill above.
+
+```bash
+E2E_BASE_URL=http://127.0.0.1:5179 node tests/e2e/catalog_media.mjs
+# Or verify a deployed, approved release:
+E2E_BASE_URL=https://regional-museum-platform.pages.dev node tests/e2e/catalog_media.mjs
+```
+
+`API_BASE_URL` can override the public Render API used for catalog discovery.
+For local Vite checks, use `VITE_API_BASE_URL=/api` and
+`API_PROXY_TARGET=https://regional-museum-platform-api.onrender.com` so browser
+GET requests use the dev proxy. Run only against a catalog with the restored
+source records; this script does not insert fixtures or reset a database.

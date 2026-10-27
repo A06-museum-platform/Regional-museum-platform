@@ -3,6 +3,7 @@ import useAsync from '../../hooks/useAsync';
 import { getCollectionItem, getRelatedItems } from '../../api/collections';
 import { galleryLabel, categoryLabel } from '../../api/constants';
 import CollectionCard from '../../components/CollectionCard';
+import MediaImage from '../../components/MediaImage';
 import EmptyState from '../../components/EmptyState';
 import Skeleton from '../../components/Skeleton';
 import Button from '../../components/Button';
@@ -71,10 +72,9 @@ export default function CollectionItemPage() {
       <nav className={styles.crumbs} aria-label="Breadcrumb">
         <Link to="/collections">Collections</Link>
         {' / '}
-        <Link to={`/collections?category=${item.category}`}>
+        {item.category && <><Link to={`/collections?category=${item.category}`}>
           {categoryLabel(item.category)}
-        </Link>
-        {' / '}
+        </Link>{' / '}</>}
         {item.title}
       </nav>
 
@@ -82,13 +82,15 @@ export default function CollectionItemPage() {
         <div
           className={styles.image}
           style={{ background: THUMBS[item.category] || THUMBS.document }}
-          role="img"
-          aria-label={`Placeholder image for ${item.title}`}
-        />
+          role={item.image_url ? undefined : 'img'}
+          aria-label={item.image_url ? undefined : `Placeholder image for ${item.title}`}
+        >
+          {item.image_url && <MediaImage src={item.image_url} alt={item.title} className={styles.photo} />}
+        </div>
 
         <div>
           <div className={styles.pills}>
-            <Pill>{categoryLabel(item.category)}</Pill>
+            {item.category && <Pill>{categoryLabel(item.category)}</Pill>}
             {item.is_family_friendly && <Pill tone="lime">Good for ages 10–14</Pill>}
           </div>
 
@@ -99,15 +101,15 @@ export default function CollectionItemPage() {
             <tbody>
               <tr>
                 <th scope="row">Accession number</th>
-                <td>{item.accession_number}</td>
+                <td>{item.accession_number || 'Not recorded'}</td>
               </tr>
               <tr>
                 <th scope="row">On display at</th>
-                <td>{galleryLabel(item.gallery)}</td>
+                <td>{galleryLabel(item.gallery) || 'Not recorded'}</td>
               </tr>
               <tr>
                 <th scope="row">Date</th>
-                <td>{item.period_text}</td>
+                <td>{item.period_text || 'Not recorded'}</td>
               </tr>
               <tr>
                 <th scope="row">Materials</th>
@@ -130,16 +132,16 @@ export default function CollectionItemPage() {
 
           <div className={styles.actions}>
             <Link to="/visit"><Button>Plan your visit</Button></Link>
-            <Link to={`/collections?gallery=${item.gallery}`}>
+            {item.gallery && <Link to={`/collections?gallery=${item.gallery}`}>
               <Button variant="ghost">More from this gallery</Button>
-            </Link>
+            </Link>}
           </div>
         </div>
       </div>
 
       {related && related.length > 0 && (
         <section className={styles.related}>
-          <h2>Other {categoryLabel(item.category).toLowerCase()} records</h2>
+          <h2>{item.category ? `Other ${categoryLabel(item.category).toLowerCase()} records` : 'Other collection records'}</h2>
           <div className={styles.relatedGrid}>
             {related.map((candidate) => (
               <CollectionCard key={candidate.id} item={candidate} />
