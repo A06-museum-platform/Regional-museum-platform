@@ -1,0 +1,29 @@
+1
+00:00:00,001 --> 00:00:10,223
+Supabase is the primary image store. R2 holds a mirrored copy with the
+same object key.
+
+2
+00:00:10,223 --> 00:00:21,175
+The real API supplies a Supabase URL. The browser loads the primary
+image successfully.
+
+3
+00:00:21,175 --> 00:00:34,336
+Only this browser blocks Supabase image requests. The application
+automatically retries the same object in R2.
+
+4
+00:00:34,336 --> 00:00:53,504
+No immediate error: the 10-second image deadline triggers the same R2
+fallback automatically.
+
+5
+00:00:53,504 --> 00:01:04,486
+Remove the browser block and reload. A fresh image load uses Supabase
+again.
+
+6
+00:01:04,486 --> 00:01:15,560
+Automatic image-read fallback works. The database and API remain online
+throughout this simulation.
