@@ -4,7 +4,7 @@
 
 **[Download / watch the MP4](supabase-r2-failover.mp4)** · English on-screen captions · 1920 × 1080 · silent, suitable for live presentation narration.
 
-Duration: **75.56 seconds**. The H.264 MP4 is about **3.4 MB**. Optional editable
+Duration: **87.92 seconds**. The H.264 MP4 is about **4.4 MB**. Optional editable
 [subtitle sidecar](supabase-r2-failover.srt) is included; captions are already
 visible in the video.
 
@@ -13,6 +13,15 @@ This is a recording of the deployed Regional Museum Platform using the real
 The side panel and captions are clearly labeled presentation overlays. The panel
 observes the actual target-image requests and the image element's rendered source.
 It is not an administration screen shipped with the application.
+
+### Readable presentation edition
+
+The main captions and source-status text are **36 pixels in the final video**.
+Captions use short two-line prompts, with longer pauses for live narration.
+A recording-only presentation view enlarges the live image and hides navigation,
+metadata tables and related cards. Full storage hostnames remain in the evidence
+file instead of using tiny text in the video. Capture is composed at 1280 × 720
+and exported to 1920 × 1080 so the visible text occupies more of the screen.
 
 ## What happens
 
@@ -77,6 +86,8 @@ node tests/e2e/record_media_failover.mjs
 The default site is `https://regional-museum-platform.pages.dev`. Optional:
 
 - `E2E_BASE_URL`: another deployment containing the same public record.
+- `API_BASE_URL`: the matching API for the initial read-only warmup (defaults
+  to the existing Render API). Warmup happens before video capture begins.
 - `PLAYWRIGHT_MODULE_PATH`: absolute `index.mjs` path for Playwright installed
   outside the repository.
 - `PLAYWRIGHT_EXECUTABLE_PATH`: an existing compatible Chromium executable.
