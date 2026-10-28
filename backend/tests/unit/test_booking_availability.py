@@ -181,4 +181,4 @@ def test_route_is_registered_on_the_app(monkeypatch, tmp_path):
     settings = config.Settings(_env_file=None, local_upload_dir=str(tmp_path))
     monkeypatch.setattr(config, "get_settings", lambda: settings)
     main = importlib.import_module("app.main")
-    assert "/api/bookings/availability" in {route.path for route in main.app.routes}
+    assert "get" in main.app.openapi()["paths"]["/api/bookings/availability"]

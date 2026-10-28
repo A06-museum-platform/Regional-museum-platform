@@ -53,7 +53,15 @@ services:
     build:
       context: .
       dockerfile: infra/Dockerfile.frontend
-    env_file: .env
+    # Expose only public browser settings; server/database keys stay in backend.
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+      VITE_USE_MOCKS: ${VITE_USE_MOCKS:-false}
+      VITE_AUTH_USE_MOCKS: ${VITE_AUTH_USE_MOCKS:-false}
+      VITE_SUPABASE_URL: ${SUPABASE_URL:-}
+      VITE_SUPABASE_BUCKET: ${SUPABASE_BUCKET:-museum-media}
+      VITE_R2_PUBLIC_BASE: ${R2_PUBLIC_BASE:-}
+      API_PROXY_TARGET: http://backend:8000
     ports:
       - "5173:5173"
     depends_on:

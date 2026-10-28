@@ -19,7 +19,7 @@ def sign_in(page, email, password):
 
 
 with sync_playwright() as p:
-    browser = p.chromium.launch()
+    browser = p.chromium.launch(executable_path=os.environ.get("PLAYWRIGHT_EXECUTABLE_PATH") or None)
     errors = []
 
     def new_page():
@@ -86,4 +86,5 @@ with sync_playwright() as p:
     admin.screenshot(path=f"{OUT}/admin_activity.png", full_page=True)
     print("activity mentions event:", admin.get_by_text(TITLE).count())
     print("errors:", errors or "none")
+    assert not errors, errors
     browser.close()

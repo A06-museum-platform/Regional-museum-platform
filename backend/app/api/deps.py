@@ -19,7 +19,8 @@ from typing import Optional
 
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+import jwt
+from jwt import InvalidTokenError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -42,7 +43,7 @@ def _decode(credentials: Optional[HTTPAuthorizationCredentials]) -> dict:
             get_settings().secret_key,
             algorithms=["HS256"],
         )
-    except JWTError:
+    except InvalidTokenError:
         raise ApiError(401, "Invalid or expired token", "AUTH_INVALID")
 
 

@@ -5,7 +5,7 @@ def sign_in(page, email, pw):
     page.goto(f"{BASE}/signin"); page.fill("input[type=email]", email)
     page.fill("input[type=password]", pw); page.press("input[type=password]", "Enter"); page.wait_for_timeout(1200)
 with sync_playwright() as p:
-    b = p.chromium.launch(); errors = []
+    b = p.chromium.launch(executable_path=os.environ.get("PLAYWRIGHT_EXECUTABLE_PATH") or None); errors = []
     def new():
         c = b.new_context(viewport={"width": 1280, "height": 900})
         c.route("**/*", lambda r: r.continue_() if r.request.url.startswith(BASE) else r.abort())
@@ -18,6 +18,7 @@ with sync_playwright() as p:
     row = staff.locator("tr", has_text="SARHN-10006")
     row.get_by_role("button", name="Check in").click(); staff.wait_for_timeout(1000)
     print("checked in pill:", row.get_by_text("Checked in").count() == 1)
+    expect(row.get_by_text("Checked in")).to_be_visible()
     staff.screenshot(path=f"{OUT}/staff_bookings.png", full_page=True)
     staff.fill("#bk-q", "SARHN-10004"); staff.wait_for_timeout(1200)
     print("search finds future booking:", staff.locator("tr", has_text="SARHN-10004").count() == 1)
@@ -34,4 +35,5 @@ with sync_playwright() as p:
     admin.screenshot(path=f"{OUT}/admin_accounts.png", full_page=True)
     tom = new(); sign_in(tom, "tom.nguyen@example.com", "Visitor123!")
     print("Tom lands on:", tom.url.replace(BASE, ""))
-    print("errors:", errors or "none"); b.close()
+    assert tom.url.endswith("/staff")
+    print("errors:", errors or "none"); assert not errors, errors; b.close()

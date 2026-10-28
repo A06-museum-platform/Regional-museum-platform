@@ -8,7 +8,7 @@ BASE = os.environ.get("E2E_BASE_URL", "http://localhost:5173")
 OUT = os.environ.get("E2E_OUT", os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots"))
 
 with sync_playwright() as p:
-    browser = p.chromium.launch()
+    browser = p.chromium.launch(executable_path=os.environ.get("PLAYWRIGHT_EXECUTABLE_PATH") or None)
     ctx = browser.new_context(viewport={"width": 1280, "height": 900})
     ctx.route("**/*", lambda r: r.continue_() if r.request.url.startswith(BASE) else r.abort())
     page = ctx.new_page()
@@ -67,4 +67,5 @@ with sync_playwright() as p:
     page.screenshot(path=f"{OUT}/flow_4_cancelled.png", full_page=True)
     print("page mentions cancelled:", page.get_by_text("ancelled").count() > 0)
     print("errors:", errors or "none")
+    assert not errors, errors
     browser.close()
