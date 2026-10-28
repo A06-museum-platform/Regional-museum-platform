@@ -168,5 +168,6 @@ def test_availability_is_matched_before_a_reference(monkeypatch, tmp_path):
     settings = config.Settings(_env_file=None, local_upload_dir=str(tmp_path))
     monkeypatch.setattr(config, "get_settings", lambda: settings)
     main = importlib.import_module("app.main")
-    paths = [route.path for route in main.app.routes]
-    assert paths.index("/api/bookings/availability") < paths.index("/api/bookings/{reference}")
+    response = TestClient(main.app).get("/api/bookings/availability")
+    assert response.status_code == 400
+    assert response.json()["code"] == "VALIDATION_ERROR"

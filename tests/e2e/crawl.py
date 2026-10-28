@@ -34,7 +34,7 @@ ROUTES = {
 def main():
     problems = []
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.chromium.launch(executable_path=os.environ.get("PLAYWRIGHT_EXECUTABLE_PATH") or None)
         for role, creds in ACCOUNTS.items():
             ctx = browser.new_context(viewport={"width": 1280, "height": 900})
             # External images/fonts can't load in this sandbox; skip them quietly.
@@ -51,12 +51,16 @@ def main():
                 page.fill("input[type=password]", creds[1])
                 page.press("input[type=password]", "Enter")
                 page.wait_for_timeout(1200)
+                if "/signin" in page.url:
+                    problems.append((role, "/signin", "Login did not complete"))
             for route in ROUTES[role]:
                 log.clear()
                 page.goto(f"{BASE}{route}")
                 page.wait_for_timeout(1500)
                 name = f"{role}{route.replace('/', '_') or '_home'}"
                 page.screenshot(path=str(OUT / f"{name}.png"), full_page=True)
+                if route.startswith(("/staff", "/admin")) and "/signin" in page.url:
+                    log.append("Protected page unexpectedly redirected to sign-in")
                 h1 = page.locator("h1").first.inner_text() if page.locator("h1").count() else "-"
                 status = "OK" if not log else "ISSUES"
                 print(f"[{status}] {role:8} {route:20} h1={h1[:50]!r}")
@@ -66,6 +70,8 @@ def main():
             ctx.close()
         browser.close()
     print(f"\n{len(problems)} problems")
+    if problems:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

@@ -2,14 +2,14 @@
 
 The token is HS256-signed with settings.secret_key and carries:
   sub  -> the user_id (as a string, per JWT convention)
-  role -> the user's role_name, which app.api.deps._decode reads back
-          to gate staff/admin endpoints.
+  role -> a role snapshot; privileged requests reload the current active
+          account and effective role from PostgreSQL before granting access.
 """
 
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
-from jose import jwt
+import jwt
 
 from app.core.config import get_settings
 

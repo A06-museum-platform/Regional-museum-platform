@@ -8,7 +8,7 @@ BASE = os.environ.get("E2E_BASE_URL", "http://localhost:5173")
 OUT = os.environ.get("E2E_OUT", os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots"))
 
 with sync_playwright() as p:
-    browser = p.chromium.launch()
+    browser = p.chromium.launch(executable_path=os.environ.get("PLAYWRIGHT_EXECUTABLE_PATH") or None)
     ctx = browser.new_context(viewport={"width": 1280, "height": 900})
     ctx.route("**/*", lambda r: r.continue_() if r.request.url.startswith(BASE) else r.abort())
     page = ctx.new_page()
@@ -51,5 +51,7 @@ with sync_playwright() as p:
         name = path.strip("/").replace("/", "_") or "home"
         m.screenshot(path=f"{OUT}/mobile_{name}.png", full_page=True)
         print(f"mobile {path:40} horizontal overflow: {overflow}px")
+        assert overflow <= 1, f"Horizontal overflow on {path}: {overflow}px"
     print("errors:", errors or "none")
+    assert not errors, errors
     browser.close()

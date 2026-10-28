@@ -4,11 +4,40 @@ Capstone project for the South Australian Regional Heritage Network.
 A fully functional web application prototype replacing reliance on posters,
 brochures and word of mouth with a centralised online presence.
 
+## Deployed application
+
+- **Website:** https://regional-museum-platform.pages.dev/
+- **Staff media library:** https://regional-museum-platform.pages.dev/staff/media
+- **Backend API documentation:** https://regional-museum-platform-api.onrender.com/docs
+- **API liveness:** https://regional-museum-platform-api.onrender.com/health
+- **Database readiness:** https://regional-museum-platform-api.onrender.com/api/health
+
+The live website uses the real FastAPI API and Supabase PostgreSQL, not the
+frontend mock accounts. Render Free can take around a minute to wake after
+inactivity; allow the first API request to complete before retrying. Payments
+are **simulated**: this release does not charge cards.
+
+Cloudflare Pages serves React, Render runs FastAPI, Supabase stores PostgreSQL
+records and primary media, and Cloudflare R2 holds mirrored media. R2 is a
+file backup, not a PostgreSQL replica. Images try the matching R2 object after
+a Supabase error or ten-second timeout. New uploads need mirroring before
+they have R2 coverage. Image fallback does not repair an API/database outage.
+
+Deployments follow **`dev`**, also the repository default branch: Render
+deploys after checks pass; GitHub Actions builds and publishes Pages. Changing
+`main` alone does not publish this environment. Apply reviewed migrations
+separately after a backup; the deployment gate only checks them.
+See [deployment](infra/deployment.md) and [maintenance](docs/handover/technical-maintenance-notes.md).
+
 ## Stack
 
 React (Vite) · FastAPI · PostgreSQL · Docker Compose
 
 ## Quick start
+
+Requires Docker with Compose v2 and Git. Host-only development/testing uses
+Python 3.11+ and Node.js 22. Run from the repository root with a fresh local
+database; do not load demo seed data into the hosted database.
 
 ```bash
 cp .env.example .env
@@ -40,7 +69,10 @@ database is unavailable.
 
 ```bash
 cd backend
-pytest tests                      # unit + permission tests, no database needed
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pytest tests/unit tests/permissions -q
 ```
 
 `tests/integration/` runs the API against a real PostgreSQL database that it
@@ -49,9 +81,15 @@ test. It only ever touches a database whose name ends in `_test` and is
 skipped when none is reachable:
 
 ```bash
+# From the repository root, while the local db container is running:
 docker compose exec db createdb -U museum museum_test
-TEST_DATABASE_URL=postgresql://museum:museum@localhost:5432/museum_test pytest tests
+cd backend
+TEST_DATABASE_URL=postgresql://museum:museum@localhost:5432/museum_test pytest tests -q
 ```
+
+The full suite **rebuilds its selected test database**. Never point it at the
+hosted database. For the frontend, from `frontend/`, run
+`npm ci && npm run lint && npm test && npm run build`.
 
 CI runs both against a `museum_test` service container, plus the front
 end's lint, unit tests and build. The role-permission matrix is tested row
@@ -66,9 +104,12 @@ README.
 `database/seed/seed.sql` creates one account per role. The passwords are
 for local demos only.
 
+They are not a list of live credentials. Use your team's existing live account;
+passwords and service keys must not be added to this README.
+
 | Role | Email | Password | After login |
 |---|---|---|---|
-| Visitor | alice@example.com | `Visitor123!` | Home page |
+| Visitor | alice@example.com | `Visitor123!` | `/account` |
 | Member | ben@example.com | `Member123!` | `/account` (Ben holds Visitor + Member; the higher role wins) |
 | Staff | staff@museum.org | `Staff123!` | `/staff` |
 | Administrator | admin@museum.org | `Admin123!` | `/staff` |
@@ -77,6 +118,10 @@ To see the 403 page, sign in as Alice or Ben and open `/staff`, or as
 Emma (staff) and open an `/admin/...` page such as `/admin/members`.
 
 ## Switching to real accounts
+
+The following is an administrator-operated **local setup** procedure. Removing
+accounts deletes related data; it is not a routine deployment step. Do not run
+it on the deployed database without a reviewed backup and explicit approval.
 
 Keep the seeded content (exhibitions, objects, events, hours) but replace
 the demo people with real ones:
@@ -130,8 +175,30 @@ simulated only in the recording browser; the API and database remain online.
 ## Contributing
 
 See `CONTRIBUTING.md`. In short: branch from `dev`, small commits,
-open a pull request into `dev`; CI must pass before merge. `main` holds
-released versions.
+open a pull request into `dev`; approval and green CI are required before merge.
+The current live environment deploys from `dev`; `main` is not its deployment branch.
+
+## Handover and operations
+
+- [Staff and administrator guide](docs/handover/staff-administrator-guide.md)
+- [Technical maintenance notes](docs/handover/technical-maintenance-notes.md)
+- [Tests and reproducible checks](docs/testing.md)
+- [Media, backup and recovery runbook](docs/runbooks/media-ops.md)
+- [Reference-image sources and licenses](docs/media/reference-catalog-images.md)
+- [Frontend development](frontend/README.md)
+
+The cloud recovery workflow is configured daily at 02:17 Australia/Adelaide;
+GitHub schedules can be delayed. It backs up PostgreSQL, mirrors media to R2,
+and checks file bytes, with seven-day private artifact retention and a 10 MiB
+artifact cap. It does not depend on a developer's Mac. Check workflow results
+and restore instructions rather than assuming a backup exists.
+
+Known handover limitations: curators must confirm image-to-record matches
+before any reassignment; technical checks do not establish curatorial accuracy.
+Some older academic/report documents are empty placeholders, and PR #30 remains
+a separate team review.
+Historical load-test results describe their recorded test environment, not a
+capacity guarantee for Render Free.
 
 ## Out of scope
 

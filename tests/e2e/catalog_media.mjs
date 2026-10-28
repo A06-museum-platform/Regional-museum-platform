@@ -54,8 +54,13 @@ try {
   await context.unroute(`${r2}/**`);
   await page.goto(`${base}/collections/${current.slug}`);
   await page.getByRole('heading', { name: current.title, exact: true }).waitFor();
-  await page.getByRole('img', { name: `Placeholder image for ${current.title}`, exact: true }).waitFor();
-  console.log('PASS existing catalog without a photo preserved');
+  if (current.image_url) {
+    await waitLoaded(current.title, new URL(current.image_url).origin);
+    console.log('PASS current catalog photo preserved');
+  } else {
+    await page.getByRole('img', { name: `Placeholder image for ${current.title}`, exact: true }).waitFor();
+    console.log('PASS current catalog no-photo placeholder preserved');
+  }
   assert.deepEqual(errors, []);
   await context.close();
 } finally {

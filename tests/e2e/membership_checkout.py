@@ -22,7 +22,7 @@ def sign_in(page, email, password):
 
 
 with sync_playwright() as p:
-    browser = p.chromium.launch()
+    browser = p.chromium.launch(executable_path=os.environ.get("PLAYWRIGHT_EXECUTABLE_PATH") or None)
     page = browser.new_page(viewport={"width": 1280, "height": 900})
     page.route("**/*", lambda r: r.continue_() if r.request.url.startswith(BASE) else r.abort())
     sent = []
