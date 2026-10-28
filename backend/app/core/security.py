@@ -1,45 +1,45 @@
+"""Password hashing and JWT minting for the auth flow (Flow 1).
+
+The token is HS256-signed with settings.secret_key and carries:
+  sub  -> the user_id (as a string, per JWT convention)
+  role -> a role snapshot; privileged requests reload the current active
+          account and effective role from PostgreSQL before granting access.
 """
-Password hashing and JWT token utilities.
-"""
+
 from datetime import datetime, timedelta, timezone
-from typing import Any
 
-from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
+import jwt
 
-from app.core.config import settings
+from app.core.config import get_settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+ALGORITHM = "HS256"
 
-
-def hash_password(plain_password: str) -> str:
-    return pwd_context.hash(plain_password)
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+# bcrypt hashes only the first 72 bytes of the input and rejects anything
+# longer, so truncate to keep long passwords from raising.
+_BCRYPT_MAX_BYTES = 72
 
 
-def create_access_token(subject: str, role: str, expires_delta: timedelta | None = None) -> str:
-    """
-    subject: usually the user_id (as string)
-    role: one of "member", "staff", "administrator" -- embedded in the token
-          so every request can be authorised without a DB round-trip.
-    """
-    expire = datetime.now(timezone.utc) + (
-        expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+def _prepare(password: str) -> bytes:
+    return password.encode("utf-8")[:_BCRYPT_MAX_BYTES]
+
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(_prepare(password), bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(_prepare(plain), hashed.encode("utf-8"))
+    except ValueError:
+        # Malformed/empty stored hash -> treat as a non-match, not a 500.
+        return False
+
+
+def create_access_token(user_id: int, role: str) -> str:
+    settings = get_settings()
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=settings.access_token_expire_minutes
     )
-    to_encode = {"sub": subject, "role": role, "exp": expire, "type": "access"}
-    return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
-
-
-def create_refresh_token(subject: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode = {"sub": subject, "exp": expire, "type": "refresh"}
-    return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
-
-
-def decode_token(token: str) -> dict[str, Any]:
-    """Raises jose.JWTError if invalid or expired -- caller converts to HTTP 401."""
-    return jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-
+    payload = {"sub": str(user_id), "role": role, "exp": expire}
+    return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)

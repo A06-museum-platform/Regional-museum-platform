@@ -1,0 +1,10 @@
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  width: 100%;
+  background: var(--c-border, #eee);
+  color: var(--c-muted, #555);
+  font-size: 0.875rem;
+}

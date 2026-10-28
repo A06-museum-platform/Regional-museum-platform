@@ -1,27 +1,114 @@
+import asyncio
+from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
+
+from app.api.admin.activity import router as admin_activity_router
+from app.api.admin.members import router as admin_members_router
+from app.api.admin.memberships import router as admin_memberships_router
+from app.api.admin.users import router as admin_users_router
+from app.api.member.activity import router as member_activity_router
+from app.api.member.bookings import router as member_bookings_router
+from app.api.member.membership import router as member_membership_router
+from app.api.member.recommendations import router as recommendations_router
+from app.api.public.auth import router as auth_router
+from app.api.public.bookings import router as public_bookings_router
+from app.api.public.collections import router as collections_router
+from app.api.public.events import router as events_router
+from app.api.public.exhibitions import router as exhibitions_router
+from app.api.public.membership_plans import router as membership_plans_router
+from app.api.public.opening_hours import router as opening_hours_router
+from app.api.public.ticket_types import router as ticket_types_router
+from app.api.public.visit_information import router as visitor_information_router
+from app.api.staff.bookings import router as staff_bookings_router
+from app.api.staff.collection_items import router as staff_collection_items_router
+from app.api.staff.events import router as staff_events_router
+from app.api.staff.exhibitions import router as staff_exhibitions_router
+from app.api.staff.media import router as staff_media_router
+from app.api.staff.opening_hours import router as staff_opening_hours_router
+from app.api.staff.visitor_information import router as staff_visitor_information_router
+from app.core.config import get_settings
+from app.core.errors import install_error_handlers
+from app.db.session import get_session
+
+app = FastAPI(title="Museum Platform API")
+install_error_handlers(app)
+app.include_router(auth_router)
+app.include_router(membership_plans_router)
+app.include_router(collections_router)
+app.include_router(events_router)
+app.include_router(exhibitions_router)
+app.include_router(opening_hours_router)
+app.include_router(ticket_types_router)
+app.include_router(visitor_information_router)
+# Keep this before any router with GET /api/bookings/{reference}; routes
+# match in order, so "availability" would be read as a booking reference.
+app.include_router(public_bookings_router)
+app.include_router(member_bookings_router)
+app.include_router(member_membership_router)
+app.include_router(member_activity_router)
+app.include_router(recommendations_router)
+app.include_router(staff_media_router)
+app.include_router(staff_collection_items_router)
+app.include_router(staff_exhibitions_router)
+app.include_router(staff_events_router)
+app.include_router(staff_opening_hours_router)
+app.include_router(staff_visitor_information_router)
+app.include_router(staff_bookings_router)
+app.include_router(admin_users_router)
+app.include_router(admin_memberships_router)
+app.include_router(admin_members_router)
+app.include_router(admin_activity_router)
+
+# Local-fallback file serving (MEDIA_BACKEND=local). The directory lives
+# on the uploads-data docker volume. check_dir=False (rather than a
+# try/except that would permanently skip the route): the mount always
+# exists, and LocalStorage creates the directory on first upload, so files
+# uploaded later are served instead of 404ing.
+try:
+    Path(get_settings().local_upload_dir).mkdir(parents=True, exist_ok=True)
+except OSError:
+    # Outside the container (CI, a laptop) /app may not be writable; the
+    # mount still works and LocalStorage reports the problem on upload.
+    pass
+app.mount(
+    "/uploads",
+    StaticFiles(directory=get_settings().local_upload_dir, check_dir=False),
+    name="uploads",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=list(dict.fromkeys(["http://localhost:5173", get_settings().frontend_origin])),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/health")
+def health():
+    # Render and Compose use this liveness probe; DB outages must not restart us.
+    return {"status": "ok"}
 
 
-def create_app() -> FastAPI:
-    app = FastAPI(title="Museum Platform API")
-
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["http://localhost:5173"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-    @app.get("/health")
-    def health():
-        return {"status": "ok"}
-
-    @app.get("/api/health")
-    def api_health():
-        return {"status": "ok", "service": "museum-api"}
-
-    return app
+async def _check_database():
+    # Include session creation and cleanup in the readiness timeout/error handling.
+    async with asynccontextmanager(get_session)() as session:
+        await session.execute(text("SELECT 1"))
 
 
-app = create_app()
+@app.get("/api/health")
+async def api_health():
+    try:
+        await asyncio.wait_for(_check_database(), timeout=2.0)
+    except Exception:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "degraded", "database": "unavailable", "service": "museum-api"},
+        )
+    return {"status": "ok", "database": "ok", "service": "museum-api"}

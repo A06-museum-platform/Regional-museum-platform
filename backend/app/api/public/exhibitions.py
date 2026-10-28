@@ -1,43 +1,36 @@
+"""Public exhibitions (frontend/src/api/exhibitions.js).
+
+GET /api/exhibitions?q=&gallery=&page=&page_size=  -> { items, total, page, page_size }
+    published exhibitions that haven't closed, current first
+GET /api/exhibitions/{slug} -> the exhibition with its published objects, or 404
 """
-Public, read-only exhibition browsing.
-GET /exhibitions -> FR-01 (list, filterable by status)
-GET /exhibitions/{id} -> FR-02 (detail)
-"""
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
 
-from app.db.session import get_db
-from app.models.exhibition import Exhibition, ExhibitionStatus
-from app.schemas.common import PaginatedResponse
-from app.schemas.exhibition import ExhibitionOut
+from typing import Literal, Optional
 
-router = APIRouter(prefix="/exhibitions", tags=["exhibitions"])
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.session import get_session
+from app.schemas.exhibition import ExhibitionDetailOut, ExhibitionListOut
+from app.services import exhibition_service
+
+router = APIRouter(prefix="/api/exhibitions", tags=["exhibitions"])
 
 
-@router.get("", response_model=PaginatedResponse[ExhibitionOut])
-def list_exhibitions(
-    status_filter: ExhibitionStatus | None = Query(None, alias="status"),
+@router.get("", response_model=ExhibitionListOut)
+async def list_exhibitions(
+    q: Optional[str] = None,
+    gallery: Optional[Literal["main_hall", "telegraph", "monster_mine", "encounter_bay"]] = None,
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    page_size: int = Query(12, ge=1, le=100),
+    db: AsyncSession = Depends(get_session),
 ):
-    query = db.query(Exhibition)
-    if status_filter:
-        query = query.filter(Exhibition.status == status_filter)
-
-    total = query.count()
-    items = (
-        query.order_by(Exhibition.start_date.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-        .all()
+    items, total = await exhibition_service.list_public(
+        db, q=q, gallery=gallery, page=page, page_size=page_size
     )
-    return PaginatedResponse(items=items, total=total, page=page, page_size=page_size)
+    return ExhibitionListOut(items=items, total=total, page=page, page_size=page_size)
 
 
-@router.get("/{exhibition_id}", response_model=ExhibitionOut)
-def get_exhibition(exhibition_id: str, db: Session = Depends(get_db)):
-    exhibition = db.get(Exhibition, exhibition_id)
-    if not exhibition:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Exhibition not found")
-    return exhibition
+@router.get("/{slug}", response_model=ExhibitionDetailOut)
+async def get_exhibition(slug: str, db: AsyncSession = Depends(get_session)):
+    return await exhibition_service.get_public(db, slug)

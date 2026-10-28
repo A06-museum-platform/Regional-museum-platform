@@ -1,114 +1,77 @@
+"""Booking endpoints for signed-in accounts (docs/decisions.md, "Booking and
+membership").
+
+POST /api/bookings                      -> 201 booking with its reference
+GET  /api/bookings/me                   -> the caller's bookings, newest visit first
+GET  /api/bookings/{reference}          -> that booking, for its owner; staff and
+                                           admins see any. Anyone else gets 404,
+                                           not 403, so references can't be probed.
+POST /api/bookings/{reference}/cancel   -> cancel an upcoming (reserved) booking;
+                                           409 CONFLICT otherwise
+
+Any account may book (role-permission matrix, "Book tickets": every role);
+Member tickets also need an active membership. Not signed in -> 401.
+
+Declare fixed paths such as /me above /{reference}: routes match in order,
+so "me" would otherwise be read as a booking reference.
 """
-Member-only ticket bookings.
-POST /bookings      -> FR-07, FR-14, NFR-08 (atomic capacity decrement)
-GET  /bookings/me   -> FR-17
-GET  /bookings/{id} -> FR-08 (confirmation w/ reference code)
-DELETE /bookings/{id} -> FR-20 (cancel before cutoff)
-"""
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import update
-from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
-from app.db.session import get_db
-from app.models.booking import Booking, BookingStatus, TimeSlot
-from app.models.user import User, UserRole
-from app.schemas.booking import BookingCreate, BookingOut
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 
-router = APIRouter(prefix="/bookings", tags=["bookings"])
+from app.api.deps import STAFF_ROLES, get_current_user
+from app.db.session import get_session
+from app.schemas.booking import BookingIn, BookingListOut, BookingOut
+from app.schemas.user import UserOut
+from app.services import activity_service
+from app.services.booking_service import cancel_booking, create_booking, get_booking, list_bookings
+
+router = APIRouter(prefix="/api/bookings", tags=["bookings"])
 
 
-@router.post("", response_model=BookingOut, status_code=status.HTTP_201_CREATED)
-def create_booking(
-    payload: BookingCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+@router.post("", response_model=BookingOut, status_code=201)
+async def book_tickets(
+    body: BookingIn,
+    user: UserOut = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
 ):
-    # Atomic capacity decrement (NFR-08): a single conditional UPDATE means
-    # the DB enforces "don't oversell" under concurrent requests.
-    result = db.execute(
-        update(TimeSlot)
-        .where(
-            TimeSlot.slot_id == payload.slot_id,
-            TimeSlot.remaining_capacity >= payload.party_size,
-        )
-        .values(remaining_capacity=TimeSlot.remaining_capacity - payload.party_size)
-    )
-    if result.rowcount == 0:
-        slot_exists = db.get(TimeSlot, payload.slot_id) is not None
-        db.rollback()
-        if not slot_exists:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Time slot not found")
-        raise HTTPException(status.HTTP_409_CONFLICT, "Not enough capacity for this time slot")
-
-    booking = Booking(
-        user_id=current_user.user_id,
-        slot_id=payload.slot_id,
-        party_size=payload.party_size,
-    )
-    db.add(booking)
-    db.commit()
-    db.refresh(booking)
-    return booking
-    # TODO: trigger confirmation email here (FR-08) -- outside this
-    # transaction (background task) so email latency can't block bookings.
-
-
-@router.get("/me", response_model=list[BookingOut])
-def my_bookings(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    return (
-        db.query(Booking)
-        .filter(Booking.user_id == current_user.user_id)
-        .order_by(Booking.created_at.desc())
-        .all()
-    )
-
-
-@router.get("/{booking_id}", response_model=BookingOut)
-def get_booking(
-    booking_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    booking = db.get(Booking, booking_id)
-    if not booking:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Booking not found")
-
-    is_owner = booking.user_id == current_user.user_id
-    is_staff = current_user.role in (UserRole.STAFF, UserRole.ADMINISTRATOR)
-    if not (is_owner or is_staff):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not your booking")
+    booking = await create_booking(db, user.id, body)
+    count = sum(line.quantity for line in booking.lines)
+    await activity_service.record(db, user, "booking.created",
+                                  f"{booking.visit_date:%a %d %b %Y}, {booking.arrival_window.start} — "
+                                  f"{count} ticket{'s' if count != 1 else ''}",
+                                  reference=booking.reference)
     return booking
 
 
-@router.delete("/{booking_id}", status_code=status.HTTP_204_NO_CONTENT)
-def cancel_booking(
-    booking_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+@router.get("/me", response_model=BookingListOut)
+async def my_bookings(
+    page: int = Query(1, ge=1),
+    size: int = Query(50, ge=1, le=100),
+    user: UserOut = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
 ):
-    booking = db.get(Booking, booking_id)
-    if not booking:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Booking not found")
+    items, total = await list_bookings(db, user_id=user.id, page=page, size=size)
+    return BookingListOut(items=items, total=total, page=page, size=size)
 
-    is_owner = booking.user_id == current_user.user_id
-    is_staff = current_user.role in (UserRole.STAFF, UserRole.ADMINISTRATOR)
-    if not (is_owner or is_staff):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not your booking")
 
-    if booking.status != BookingStatus.CONFIRMED:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Booking is not in a cancellable state")
+@router.get("/{reference}", response_model=BookingOut)
+async def read_booking(
+    reference: str,
+    user: UserOut = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
+):
+    return await get_booking(db, reference, user.id, sees_all=user.role in STAFF_ROLES)
 
-    # TODO (FR-20): reject if now is past the agreed cancellation cutoff.
 
-    booking.status = BookingStatus.CANCELLED
-    db.execute(
-        update(TimeSlot)
-        .where(TimeSlot.slot_id == booking.slot_id)
-        .values(remaining_capacity=TimeSlot.remaining_capacity + booking.party_size)
-    )
-    db.commit()
-    return None
+@router.post("/{reference}/cancel", response_model=BookingOut)
+async def cancel_my_booking(
+    reference: str,
+    user: UserOut = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
+):
+    booking = await cancel_booking(db, reference, user.id, sees_all=user.role in STAFF_ROLES)
+    await activity_service.record(db, user, "booking.cancelled",
+                                  f"{booking.visit_date:%a %d %b %Y}, {booking.arrival_window.start}",
+                                  reference=booking.reference, subject_user_id=booking.user_id)
+    return booking

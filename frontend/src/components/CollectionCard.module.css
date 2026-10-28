@@ -11,7 +11,9 @@
 
 .card:hover { border-color: var(--c-moss); }
 
-.thumb { height: 140px; }
+.thumb { height: 140px; position: relative; overflow: hidden; }
+
+.image { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .body { padding: var(--s-4); }
 

@@ -1,30 +1,19 @@
+"""Public visitor information (docs/api-contract.md section 10).
+
+GET /api/visitor-information -> address, transport, parking, contact,
+                                about text and facilities / accessibility
 """
-Public visit-planning info that doesn't need login.
-GET /time-slots -> FR-07 (check availability for a date, before booking)
 
-Opening hours / facilities / accessibility (FR-04, FR-05) belong here too
-once built -- this file is the natural home for all "plan your visit" reads.
-"""
-from datetime import date as date_type
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
+from app.db.session import get_session
+from app.schemas.visitor_information import VisitorInformationOut
+from app.services.visitor_information_service import get_visitor_information
 
-from app.db.session import get_db
-from app.models.booking import TimeSlot
-from app.schemas.booking import TimeSlotOut
-
-router = APIRouter(tags=["visit-information"])
+router = APIRouter(prefix="/api", tags=["visitor-information"])
 
 
-@router.get("/time-slots", response_model=list[TimeSlotOut])
-def list_available_time_slots(
-    slot_date: date_type = Query(..., alias="date"),
-    db: Session = Depends(get_db),
-):
-    return (
-        db.query(TimeSlot)
-        .filter(TimeSlot.date == slot_date)
-        .order_by(TimeSlot.start_time)
-        .all()
-    )
+@router.get("/visitor-information", response_model=VisitorInformationOut)
+async def read_visitor_information(db: AsyncSession = Depends(get_session)):
+    return await get_visitor_information(db)

@@ -6,20 +6,17 @@
  * in every page.
  */
 
+import { getToken, expireSession } from './session';
+export { getToken, setToken, clearToken } from './session';
+
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
 export const MOCK_DELAY = Number(import.meta.env.VITE_MOCK_DELAY ?? 400);
 
-const TOKEN_KEY = 'sarhn.access_token';
-
-export const getToken = () => localStorage.getItem(TOKEN_KEY);
-export const setToken = (token) => localStorage.setItem(TOKEN_KEY, token);
-export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
-
 /**
  * Mirrors the error shape in the API contract:
- *   { error: { code, message, reference } }
+ *   { detail, code }            (plus `fields` on a 422 validation error)
  *
  * `status` matters as much as `code`:
  *   401 — not signed in, or the token expired  -> send them to sign in
@@ -83,7 +80,7 @@ export async function request(path, { method = 'GET', params, body } = {}) {
 
   if (response.status === 204) return null;
 
-  let payload = null;
+  let payload;
   try {
     payload = await response.json();
   } catch {
@@ -91,12 +88,19 @@ export async function request(path, { method = 'GET', params, body } = {}) {
   }
 
   if (!response.ok) {
+    if (response.status === 401 && !['/auth/login', '/auth/register'].includes(path)) {
+      expireSession(token);
+    }
+    // The backend sends the contract's { detail, code } (plus `fields` on a
+    // validation error). The older { error: { code, message } } envelope is
+    // still read so the mock modules and any cached response keep working.
+    const legacy = payload?.error;
     throw new ApiError({
       status: response.status,
-      code: payload?.error?.code ?? 'UNKNOWN',
-      message: payload?.error?.message,
-      reference: payload?.error?.reference,
-      fields: payload?.error?.fields,
+      code: payload?.code ?? legacy?.code ?? 'UNKNOWN',
+      message: typeof payload?.detail === 'string' ? payload.detail : legacy?.message,
+      reference: legacy?.reference,
+      fields: payload?.fields ?? legacy?.fields,
     });
   }
 

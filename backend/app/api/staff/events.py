@@ -1,73 +1,81 @@
+"""Staff event management (role-permission matrix: "Create / edit / delete
+events", "Set event capacity", "View all bookings and event registrations";
+client requirement 3(iii) "publish event details").
+
+GET    /api/staff/events?q=&status=&gallery=     -> { items, total }  (drafts included)
+POST   /api/staff/events                          -> 201
+PATCH  /api/staff/events/{id}                     -> updated event; publishing is a PATCH
+                                                     of status; capacity can't drop below
+                                                     places taken (409)
+DELETE /api/staff/events/{id}                     -> 204; 409 while people are registered
+GET    /api/staff/events/{id}/registrations       -> who is registered
 """
-Staff content management for events.
-POST/PUT/DELETE /events -> FR-11
-GET /events/{id}/registrations -> FR-13 (who's registered)
-"""
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
-from app.api.deps import require_role
-from app.db.session import get_db
-from app.models.event import Event, EventRegistration
-from app.models.user import User, UserRole
-from app.schemas.event import EventCreate, EventOut, EventRegistrationOut, EventUpdate
+from typing import Literal, Optional
 
-router = APIRouter(prefix="/events", tags=["events-admin"])
+from fastapi import APIRouter, Depends, Response
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import require_staff
+from app.db.session import get_session
+from app.schemas.event import EventIn, EventOut, EventPatch, StaffEventListOut, StaffRegistrationOut
+from app.services import activity_service, event_service
+
+router = APIRouter(
+    prefix="/api/staff/events",
+    tags=["staff-events"],
+    dependencies=[Depends(require_staff)],
+)
 
 
-@router.post("", response_model=EventOut, status_code=status.HTTP_201_CREATED)
-def create_event(
-    payload: EventCreate,
-    db: Session = Depends(get_db),
-    _staff: User = Depends(require_role(UserRole.STAFF, UserRole.ADMINISTRATOR)),
+@router.get("", response_model=StaffEventListOut)
+async def list_events(
+    q: Optional[str] = None,
+    status: Optional[Literal["draft", "published", "cancelled", "completed"]] = None,
+    gallery: Optional[Literal["main_hall", "telegraph", "monster_mine", "encounter_bay"]] = None,
+    db: AsyncSession = Depends(get_session),
 ):
-    event = Event(**payload.model_dump())
-    db.add(event)
-    db.commit()
-    db.refresh(event)
+    items, total = await event_service.staff_list(db, q=q, status=status, gallery=gallery)
+    return StaffEventListOut(items=items, total=total)
+
+
+@router.post("", response_model=EventOut, status_code=201)
+async def create_event(
+    body: EventIn,
+    actor: dict = Depends(require_staff),
+    db: AsyncSession = Depends(get_session),
+):
+    event = await event_service.create(db, body)
+    action = "event.published" if event.status == "published" else "event.created"
+    await activity_service.record(db, actor, action, event.title)
     return event
 
 
-@router.put("/{event_id}", response_model=EventOut)
-def update_event(
-    event_id: str,
-    payload: EventUpdate,
-    db: Session = Depends(get_db),
-    _staff: User = Depends(require_role(UserRole.STAFF, UserRole.ADMINISTRATOR)),
+@router.patch("/{event_id}", response_model=EventOut)
+async def update_event(
+    event_id: int,
+    body: EventPatch,
+    actor: dict = Depends(require_staff),
+    db: AsyncSession = Depends(get_session),
 ):
-    event = db.get(Event, event_id)
-    if not event:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Event not found")
-    for field, value in payload.model_dump(exclude_unset=True).items():
-        setattr(event, field, value)
-    db.commit()
-    db.refresh(event)
+    event = await event_service.update(db, event_id, body)
+    action = {"published": "event.published", "draft": "event.unpublished",
+              "cancelled": "event.cancelled"}.get(body.status or "", "event.updated")
+    await activity_service.record(db, actor, action, event.title)
     return event
 
 
-@router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_event(
-    event_id: str,
-    db: Session = Depends(get_db),
-    _staff: User = Depends(require_role(UserRole.STAFF, UserRole.ADMINISTRATOR)),
+@router.delete("/{event_id}", status_code=204, response_class=Response)
+async def delete_event(
+    event_id: int,
+    actor: dict = Depends(require_staff),
+    db: AsyncSession = Depends(get_session),
 ):
-    event = db.get(Event, event_id)
-    if not event:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Event not found")
-    db.delete(event)
-    db.commit()
-    return None
+    title = await event_service.delete(db, event_id)
+    await activity_service.record(db, actor, "event.deleted", title)
+    return Response(status_code=204)
 
 
-@router.get("/{event_id}/registrations", response_model=list[EventRegistrationOut])
-def list_event_registrations(
-    event_id: str,
-    db: Session = Depends(get_db),
-    _staff: User = Depends(require_role(UserRole.STAFF, UserRole.ADMINISTRATOR)),
-):
-    return (
-        db.query(EventRegistration)
-        .filter(EventRegistration.event_id == event_id)
-        .order_by(EventRegistration.created_at.desc())
-        .all()
-    )
+@router.get("/{event_id}/registrations", response_model=list[StaffRegistrationOut])
+async def event_registrations(event_id: int, db: AsyncSession = Depends(get_session)):
+    return await event_service.registrations_for_event(db, event_id)

@@ -226,7 +226,6 @@ Failure:
 | Method | Path | Role | Notes |
 |---|---|---|---|
 | POST | `/api/auth/register` | Public | `{ email, password, first_name, last_name }` → `201` user object; `409 CONFLICT` if email taken |
-| POST | `/api/auth/refresh` | Public | `{ refresh_token }` → `200 { access_token, token_type }`; `401 UNAUTHENTICATED` if invalid |
 | POST | `/api/auth/logout` | Authenticated | `204`, no body |
 | GET | `/api/auth/me` | Authenticated | same `user` shape as login |
 | GET | `/api/opening-hours` | Public | `200` weekly array |
@@ -237,6 +236,13 @@ Failure:
 | GET | `/api/membership-applications` | Admin | `?status=pending&page=&size=`; `403` if not admin |
 | POST | `/api/membership-applications/{id}/approve` \| `/reject` | Admin | `200` updated application; `404`/`409` |
 | GET | `/api/activity-log` | Admin | own-activity variant is `/api/activity/me` (Authenticated) |
+
+**Out of scope for this release: `POST /api/auth/refresh`.** Login returns
+only a short-lived `access_token` (lifetime set by
+`ACCESS_TOKEN_EXPIRE_MINUTES`), with no `refresh_token`. When it expires,
+`GET /api/auth/me` returns `401` and the front end sends the user back to
+sign in. Adding refresh later means issuing a `refresh_token` from
+`/api/auth/login` and then adding this endpoint.
 
 ---
 

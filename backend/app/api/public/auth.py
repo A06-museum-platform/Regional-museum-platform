@@ -1,83 +1,45 @@
+"""Public auth endpoints (docs/api-contract.md sections 1 and 10).
+
+POST /api/auth/login    -> { access_token, token_type, user }
+POST /api/auth/register -> 201 { access_token, token_type, user }; the new
+                           account is a visitor and is signed straight in
+GET  /api/auth/me       -> user (the front end calls it on every page load
+                           to restore the session)
 """
-Public auth actions -- no existing session required to call these.
-POST /auth/register, POST /auth/login, POST /auth/refresh, POST /auth/logout
-"""
-from fastapi import APIRouter, Depends, HTTPException, status
-from jose import JWTError
-from sqlalchemy.orm import Session
 
-from app.core.security import (
-    create_access_token,
-    create_refresh_token,
-    decode_token,
-    hash_password,
-    verify_password,
-)
-from app.db.session import get_db
-from app.models.user import User
-from app.schemas.auth import (
-    AccessTokenOut,
-    RefreshRequest,
-    TokenPair,
-    UserLogin,
-    UserOut,
-    UserRegister,
-)
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+from app.api.deps import get_current_user
+from app.core.security import create_access_token
+from app.db.session import get_session
+from app.schemas.auth import LoginIn, RegisterIn, TokenOut
+from app.schemas.user import UserOut
+from app.services.auth_service import authenticate, register
+
+router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-def register(payload: UserRegister, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.email == payload.email).first()
-    if existing:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered")
+@router.post("/login", response_model=TokenOut)
+async def login(
+    body: LoginIn,
+    db: AsyncSession = Depends(get_session),
+):
+    user = await authenticate(db, body.email, body.password)
+    token = create_access_token(user_id=user.id, role=user.role)
+    return TokenOut(access_token=token, user=user)
 
-    user = User(
-        email=payload.email,
-        password_hash=hash_password(payload.password),
-        first_name=payload.first_name,
-        last_name=payload.last_name,
-        # role defaults to MEMBER -- staff/administrator accounts are
-        # created via app/api/admin/users.py, not through public register
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+
+@router.post("/register", response_model=TokenOut, status_code=201)
+async def register_account(
+    body: RegisterIn,
+    db: AsyncSession = Depends(get_session),
+):
+    user = await register(db, body)
+    token = create_access_token(user_id=user.id, role=user.role)
+    return TokenOut(access_token=token, user=user)
+
+
+@router.get("/me", response_model=UserOut)
+async def me(user: UserOut = Depends(get_current_user)):
     return user
-
-
-@router.post("/login", response_model=TokenPair)
-def login(payload: UserLogin, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == payload.email).first()
-    if not user or not verify_password(payload.password, user.password_hash):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect email or password")
-    if not user.is_active:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Account is disabled")
-
-    return TokenPair(
-        access_token=create_access_token(subject=user.user_id, role=user.role.value),
-        refresh_token=create_refresh_token(subject=user.user_id),
-    )
-
-
-@router.post("/refresh", response_model=AccessTokenOut)
-def refresh(payload: RefreshRequest, db: Session = Depends(get_db)):
-    try:
-        decoded = decode_token(payload.refresh_token)
-        if decoded.get("type") != "refresh":
-            raise ValueError("wrong token type")
-    except (JWTError, ValueError):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid refresh token")
-
-    user = db.get(User, decoded["sub"])
-    if user is None or not user.is_active:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid refresh token")
-
-    return AccessTokenOut(access_token=create_access_token(subject=user.user_id, role=user.role.value))
-
-
-@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout():
-    # Stateless JWT -- nothing to invalidate server-side for the MVP.
-    return None

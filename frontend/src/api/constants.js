@@ -21,6 +21,13 @@ export const CATEGORIES = {
   machinery: 'Machinery',
 };
 
+/** Accessibility support a visitor can ask for when booking. */
+export const ACCESSIBILITY_OPTIONS = {
+  step_free: 'Step-free access',
+  sensory_backpack: 'Sensory backpack',
+  hearing_loop: 'Hearing loop',
+};
+
 export const galleryLabel = (key) => GALLERIES[key] ?? key;
 export const categoryLabel = (key) => CATEGORIES[key] ?? key;
 

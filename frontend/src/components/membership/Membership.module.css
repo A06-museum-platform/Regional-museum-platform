@@ -1,0 +1,139 @@
+/* Membership plans, the apply panel and the member's own status. Follows the
+   "Membership — apply" board. */
+
+.plans {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-4);
+  margin: var(--s-6) 0 var(--s-5);
+}
+
+.plan {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-white);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: var(--s-5) var(--s-4) var(--s-4);
+}
+
+.planSelected {
+  border: 2px solid var(--c-moss);
+  background: var(--c-lime-soft);
+  padding: calc(var(--s-5) - 1px) calc(var(--s-4) - 1px) calc(var(--s-4) - 1px);
+}
+
+.planBadge {
+  position: absolute;
+  top: -11px;
+  left: var(--s-4);
+  background: var(--c-lime);
+  color: var(--c-ink);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+.planName { font-size: 16px; margin-bottom: 0; }
+
+.planPrice {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  margin: var(--s-2) 0;
+}
+
+.planPrice span { font-family: var(--font-body); font-size: 14px; font-weight: 400; color: var(--c-muted); }
+
+.benefits {
+  list-style: none;
+  margin: 0 0 var(--s-4);
+  padding: 0;
+  font-size: var(--fs-sm);
+  color: var(--c-muted);
+  line-height: 1.7;
+  flex: 1;
+}
+
+.apply {
+  max-width: 640px;
+  border: 1px solid var(--c-border);
+  background: var(--c-white);
+  border-radius: var(--radius);
+  padding: var(--s-5);
+}
+
+.applyHead { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-2); }
+.applyHead h2 { margin: 0; font-size: var(--fs-md); }
+.apply p { font-size: 14px; margin-bottom: var(--s-3); }
+.apply .field { max-width: 260px; }
+
+.success {
+  max-width: 640px;
+  background: var(--c-lime-soft);
+  border: 1px solid var(--c-lime);
+  border-radius: var(--radius);
+  padding: var(--s-5);
+}
+
+.success h2 { font-size: 18px; margin-bottom: var(--s-2); }
+.success p { font-size: 14px; }
+
+.errorBox {
+  background: var(--c-danger-soft);
+  border: 1px solid var(--c-danger);
+  border-radius: var(--radius);
+  padding: var(--s-3) var(--s-4);
+  color: var(--c-danger);
+  font-size: var(--fs-sm);
+  margin-bottom: var(--s-4);
+}
+
+.row { display: flex; gap: var(--s-2); flex-wrap: wrap; align-items: center; }
+
+/* --- member's own status ---------------------------------------------- */
+.card {
+  background: var(--c-white);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.cardTop {
+  background: var(--c-ink);
+  color: var(--c-paper);
+  padding: var(--s-5);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+
+.cardEyebrow { font-size: var(--fs-sm); color: #B8C2A8; }
+.cardTier { font-family: var(--font-display); color: var(--c-lime); font-size: var(--fs-lg); font-weight: 700; margin: var(--s-1) 0; }
+.cardRef { font-size: var(--fs-sm); color: #B8C2A8; letter-spacing: 0.03em; }
+
+.cardBody { padding: var(--s-4) var(--s-5) var(--s-5); }
+
+.facts { width: 100%; border-collapse: collapse; font-size: 14px; }
+.facts th { text-align: left; font-weight: 400; color: var(--c-muted); width: 40%; padding: 9px 0; border-bottom: 1px solid var(--c-border); }
+.facts td { padding: 9px 0; border-bottom: 1px solid var(--c-border); }
+
+.statusNote {
+  border-radius: var(--radius);
+  padding: var(--s-4) var(--s-5);
+  font-size: 14px;
+}
+
+.statusNote h3 { margin-bottom: var(--s-1); }
+.statusNote p { margin-bottom: var(--s-3); }
+.statusNote p:last-child { margin-bottom: 0; }
+.statusPending { background: var(--c-ochre-soft); border: 1px solid var(--c-ochre); }
+.statusBad { background: var(--c-danger-soft); border: 1px solid #E0B6AE; }
+
+@media (max-width: 768px) {
+  .plans { grid-template-columns: 1fr; gap: var(--s-5); }
+  .apply, .success { padding: var(--s-4); }
+}

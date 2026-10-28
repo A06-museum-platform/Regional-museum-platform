@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { NavLink, Link, Outlet } from 'react-router-dom';
+import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
 import styles from './VisitorLayout.module.css';
 
@@ -17,9 +18,8 @@ const NAV = [
  */
 export default function VisitorLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
-
-  // TODO(W6): replace with the real auth context once login is wired up.
-  const signedIn = false;
+  const { user, isSignedIn, isStaff, signOut } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className={styles.shell}>
@@ -51,20 +51,51 @@ export default function VisitorLayout() {
             ))}
           </nav>
 
-          <input
-            className={styles.search}
-            type="search"
-            placeholder="Search collections"
-            aria-label="Search collections"
-          />
+          <form
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const q = new FormData(event.currentTarget).get('q')?.toString().trim();
+              navigate(q ? `/collections?q=${encodeURIComponent(q)}` : '/collections');
+              setMenuOpen(false);
+            }}
+          >
+            <input
+              className={styles.search}
+              type="search"
+              name="q"
+              placeholder="Search collections"
+              aria-label="Search collections"
+            />
+          </form>
 
           <div className={styles.actions}>
-            {signedIn ? (
-              <Button size="sm">Book tickets</Button>
+            {isSignedIn ? (
+              <>
+                {isStaff && (
+                  <Link to="/staff">
+                    <Button variant="ghost" size="sm">Workspace</Button>
+                  </Link>
+                )}
+                {!isStaff && (
+                  <Link to="/account">
+                    <Button variant="ghost" size="sm">My account</Button>
+                  </Link>
+                )}
+                <Link to="/book"><Button size="sm">Book tickets</Button></Link>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  title={user.full_name}
+                  onClick={() => { signOut(); navigate('/'); }}
+                >
+                  Sign out
+                </Button>
+              </>
             ) : (
               <>
-                <Button variant="ghost" size="sm">Sign in</Button>
-                <Button size="sm">Join</Button>
+                <Link to="/signin"><Button variant="ghost" size="sm">Sign in</Button></Link>
+                <Link to="/membership"><Button size="sm">Join</Button></Link>
               </>
             )}
           </div>
@@ -84,6 +115,8 @@ export default function VisitorLayout() {
           </div>
           <div>
             <Link to="/visit">Plan your visit</Link>
+            <br />
+            <Link to="/book">Book tickets</Link>
             <br />
             <Link to="/membership">Membership</Link>
           </div>

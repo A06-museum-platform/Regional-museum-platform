@@ -1,4 +1,13 @@
-node_modules
-dist
-.env.local
+# ** so files inside frontend/ are excluded too: a developer's
+# frontend/.env.local (e.g. VITE_USE_MOCKS=true) must not be baked into the image.
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+rclone.conf
+*.dump
+database/*.sql
 coverage
+uploads
+backups

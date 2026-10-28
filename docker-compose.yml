@@ -21,7 +21,19 @@ services:
     build:
       context: .
       dockerfile: infra/Dockerfile.backend
+    # Development: one process that reloads when backend/app changes.
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     env_file: .env
+    # Passthrough (not a secret default): lets `MEDIA_BACKEND=r2 ...`
+    # flip the active storage backend without editing files. Falls back
+    # to `local` when unset; a MEDIA_BACKEND line in .env also works
+    # because compose interpolates it here.
+    environment:
+      - MEDIA_BACKEND=${MEDIA_BACKEND:-local}
+      # Always the local db here, deliberately not interpolated: nothing in
+      # .env can repoint it. Staging is a per-command opt-in via the overlay:
+      #   docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d backend
+      - DATABASE_URL=postgresql://museum:museum@db:5432/museum
     ports:
       - "8000:8000"
     depends_on:
@@ -29,6 +41,8 @@ services:
         condition: service_healthy
     volumes:
       - ./backend/app:/app/app
+      - ./scripts:/app/scripts:ro
+      - uploads-data:/app/uploads
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -39,7 +53,15 @@ services:
     build:
       context: .
       dockerfile: infra/Dockerfile.frontend
-    env_file: .env
+    # Expose only public browser settings; server/database keys stay in backend.
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+      VITE_USE_MOCKS: ${VITE_USE_MOCKS:-false}
+      VITE_AUTH_USE_MOCKS: ${VITE_AUTH_USE_MOCKS:-false}
+      VITE_SUPABASE_URL: ${SUPABASE_URL:-}
+      VITE_SUPABASE_BUCKET: ${SUPABASE_BUCKET:-museum-media}
+      VITE_R2_PUBLIC_BASE: ${R2_PUBLIC_BASE:-}
+      API_PROXY_TARGET: http://backend:8000
     ports:
       - "5173:5173"
     depends_on:
@@ -53,3 +75,4 @@ services:
 
 volumes:
   postgres-data:
+  uploads-data:

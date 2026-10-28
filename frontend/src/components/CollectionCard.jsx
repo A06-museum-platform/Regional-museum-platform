@@ -1,10 +1,13 @@
 import { Link } from 'react-router-dom';
 import Pill from './Pill';
+import MediaImage from './MediaImage';
+import { catalogPhotoCredit } from '../utils/catalogPhotoCredit';
 import { galleryLabel, categoryLabel } from '../api/constants';
 import styles from './CollectionCard.module.css';
 
 /**
- * Placeholder imagery until staff upload real photographs. The gradient is
+ * Shows the object's primary image once staff upload one; until then (and if
+ * the image fails to load) a gradient derived from the category. The gradient is
  * derived from the category so the grid does not read as rows of identical
  * grey boxes during the client demonstration.
  */
@@ -22,10 +25,13 @@ export default function CollectionCard({ item }) {
       <div
         className={styles.thumb}
         style={{ background: THUMBS[item.category] || THUMBS.document }}
-      />
+      >
+        {item.image_url && <MediaImage src={item.image_url} alt="" hideOnError className={styles.image} />}
+      </div>
       <div className={styles.body}>
         <div className={styles.pills}>
           <Pill>{categoryLabel(item.category)}</Pill>
+          {catalogPhotoCredit(item.image_url) && <Pill>Reference photo</Pill>}
           {item.is_family_friendly && <Pill tone="lime">Ages 10–14</Pill>}
         </div>
         <h3 className={styles.title}>{item.title}</h3>

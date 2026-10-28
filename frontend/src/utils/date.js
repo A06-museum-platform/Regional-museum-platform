@@ -45,3 +45,38 @@ export const comingWeekend = () => {
   sunday.setHours(23, 59, 59, 999);
   return { from: saturday.toISOString(), to: sunday.toISOString() };
 };
+
+/*
+ * Calendar dates (a visit day, with no time attached) travel as plain
+ * 'YYYY-MM-DD' strings. `new Date('2026-10-18')` parses that as UTC midnight,
+ * which is the previous evening anywhere west of Greenwich — so build them
+ * from parts, in local time, instead.
+ */
+
+/** Date object -> 'YYYY-MM-DD' in local time. */
+export const toIsoDate = (date) => {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
+/** 'YYYY-MM-DD' -> Date at local midnight. */
+export const fromIsoDate = (isoDate) => {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+/** 'YYYY-MM-DD' -> 'Saturday 24 October 2026'. */
+export const formatCalendarDate = (isoDate) =>
+  fromIsoDate(isoDate).toLocaleDateString(AU, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+/** Today plus `days`, as 'YYYY-MM-DD'. */
+export const isoDateFromToday = (days = 0) => {
+  const date = startOfToday();
+  date.setDate(date.getDate() + days);
+  return toIsoDate(date);
+};
