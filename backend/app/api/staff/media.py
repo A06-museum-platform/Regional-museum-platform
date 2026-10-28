@@ -20,6 +20,7 @@ from app.core.config import get_settings
 from app.core.errors import ApiError
 from app.db.session import get_session
 from app.schemas.media import MediaOut, MediaUploadOut
+from app.services import media_service
 from app.services.storage import (
     StorageNotConfigured,
     UploadRejected,
@@ -55,11 +56,11 @@ def _storage():
         raise ApiError(500, str(exc), "CONFIG_ERROR")
 
 
-async def _get_owner(db: AsyncSession, owner: str, owner_id: int) -> tuple[str, str]:
+async def _get_owner(db: AsyncSession, owner: str, owner_id: int, for_update: bool = False) -> tuple[str, str]:
     table, pk, fk = OWNERS[owner]
     exists = (
         await db.execute(
-            text(f"SELECT 1 FROM {table} WHERE {pk} = :id"), {"id": owner_id}
+            text(f"SELECT 1 FROM {table} WHERE {pk} = :id" + (" FOR UPDATE" if for_update else "")), {"id": owner_id}
         )
     ).first()
     if not exists:
@@ -110,7 +111,7 @@ async def upload_media(
         raise ApiError(status_code, exc.detail, exc.code)
 
     store, mode = _storage()
-    _, fk = await _get_owner(db, owner, owner_id)
+    _, fk = await _get_owner(db, owner, owner_id, for_update=is_primary)
 
     # JWT 'sub' is a string; uploaded_by is INTEGER. Non-numeric subs
     # (e.g. future UUID subjects) degrade to NULL, never to a 500.
@@ -186,6 +187,15 @@ async def list_media(
         )
     ).all()
     return [_row_to_out(r) for r in rows]
+
+
+@router.patch("/media/{media_id}/primary", response_model=MediaOut)
+async def make_primary_media(
+    media_id: int,
+    db: AsyncSession = Depends(get_session),
+    staff: dict = Depends(require_staff),
+):
+    return _row_to_out(await media_service.make_primary(db, media_id))
 
 
 @router.delete("/media/{media_id}", status_code=204)

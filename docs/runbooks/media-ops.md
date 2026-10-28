@@ -692,3 +692,36 @@ node tests/e2e/media_session.mjs
 This test intercepts every API call and exercises valid uploads, missing or
 expired sessions, re-login, cross-tab logout, 403/503 behavior and delayed old
 401 responses. It never writes to hosted storage or modifies real accounts.
+
+### Stable record selection and public covers
+
+Choose a record **by title** in Media Library. The selector displays its real
+record ID and publication status; it does not use display positions or image
+IDs. There is no separate “Load images” step: changing the selected record
+immediately replaces the upload target. Changing record type clears the
+selection. Missing records and failed lookups have no uploader, and selectors
+are locked while an upload, cover change or deletion is in progress.
+
+The exhibition management table also shows the record ID and provides a
+“Manage images” link to `/staff/media?type=exhibition&id=<record-id>`.
+A draft exhibition can store images but remains absent from the public site.
+
+Each thumbnail shows its separate **Image ID**. These IDs can have gaps after
+uploads/deletions; they are not exhibition IDs and must not be renumbered.
+“Use as cover” selects an existing image for that record's public card/detail.
+It calls `PATCH /api/staff/media/{media_id}/primary` (Staff/Admin only, 200
+`MediaOut`; missing image 404, video 400). This changes only primary flags
+within that owner, without uploading, moving, deleting or rewriting files.
+Cover changes serialize on the owner row, including primary-image uploads.
+Public visibility still follows the record's publication rules.
+
+If earlier images were uploaded to the wrong record, obtain the intended
+image-ID → record-title/ID mapping from the curator before reassociating them.
+A filename/storage path or a thumbnail alone is not curatorial approval to
+change its owner. Back up and preserve all unrelated rows during repair.
+
+Isolated selection regression (same local setup as the session test):
+
+```bash
+node tests/e2e/media_records.mjs
+```
