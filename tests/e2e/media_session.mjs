@@ -30,6 +30,7 @@ try {
       // Vite serves JavaScript from /src/api/ too; those are not API requests.
       if (!path.startsWith('/api/')) return route.continue();
       const bearer = request.headers().authorization;
+      if (path === '/api/staff/collection-items') return json(route, 200, { items: [{ id: 6, title: 'Session fixture', status: 'published' }] });
       if (path === '/api/auth/login') return json(route, 200, { user, access_token: freshToken });
       if (path === '/api/auth/me') {
         if (scenario === 'old-me-401-new-login' && !held && bearer === `Bearer ${token}`) {
@@ -70,11 +71,11 @@ try {
       await page.getByLabel('Email', { exact: true }).fill('staff@example.invalid');
       await page.getByLabel('Password', { exact: true }).fill('test-only');
       await page.getByRole('main').getByRole('button', { name: 'Sign in', exact: true }).click();
-      await page.waitForURL('**/staff/media');
+      await page.waitForURL('**/staff/media?type=collection-item&id=6');
       await page.waitForFunction(() => [...document.querySelectorAll('button')].some(b => b.textContent === 'Upload images' && !b.disabled));
     };
     try {
-      await page.goto(`${base}/staff/media`, { waitUntil: 'domcontentloaded' });
+      await page.goto(`${base}/staff/media?type=collection-item&id=6`, { waitUntil: 'domcontentloaded' });
       const upload = page.getByRole('button', { name: 'Upload images', exact: true });
       if (scenario === 'list-401-relogin') {
         await ended();await relogin();
@@ -86,14 +87,14 @@ try {
         await page.getByRole('heading', { name: 'Media library' }).waitFor();
         release();await page.waitForTimeout(250);
         assert.equal(await page.evaluate(key => localStorage.getItem(key), key), freshToken);
-        assert.ok(page.url().endsWith('/staff/media'));
+        assert.ok(page.url().endsWith('/staff/media?type=collection-item&id=6'));
       } else if (scenario === 'old-401-new-login') {
         while (!held) await page.waitForTimeout(20);
         const other = await context.newPage();await other.goto(`${base}/signin`);
         await other.evaluate(key => localStorage.removeItem(key), key);
         await ended();await relogin();release();await page.waitForTimeout(250);
         assert.equal(await page.evaluate(key => localStorage.getItem(key), key), freshToken);
-        assert.ok(page.url().endsWith('/staff/media'));
+        assert.ok(page.url().endsWith('/staff/media?type=collection-item&id=6'));
       } else if (scenario === 'expiry') {
         await ended();assert.equal(posts, 0);
       } else if (scenario === 'other-tab-logout') {

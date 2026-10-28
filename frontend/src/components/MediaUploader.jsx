@@ -6,11 +6,11 @@
  *                  onUploaded={(media) => ...} />
  */
 import { useEffect, useRef, useState } from 'react';
-import { deleteMedia, listMedia, resolveMediaUrl, uploadMedia } from '../api/media.js';
+import { deleteMedia, listMedia, makePrimaryMedia, resolveMediaUrl, uploadMedia } from '../api/media.js';
 import styles from './MediaUploader.module.css';
 import MediaImage from './MediaImage.jsx';
 
-export default function MediaUploader({ ownerType, ownerId, onUploaded }) {
+export default function MediaUploader({ ownerType, ownerId, onUploaded, onBusyChange }) {
   const inputRef = useRef(null);
   const [items, setItems] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -41,6 +41,7 @@ export default function MediaUploader({ ownerType, ownerId, onUploaded }) {
     const files = [...event.target.files];
     if (!files.length) return;
     setBusy(true);
+    onBusyChange?.(true);
     setError('');
     try {
       for (const [index, file] of files.entries()) {
@@ -55,12 +56,14 @@ export default function MediaUploader({ ownerType, ownerId, onUploaded }) {
       setError(err.message || 'Upload failed.');
     } finally {
       setBusy(false);
+      onBusyChange?.(false);
       event.target.value = '';
     }
   }
 
   async function handleDelete(mediaId) {
     setBusy(true);
+    onBusyChange?.(true);
     try {
       await deleteMedia(mediaId);
       await refresh();
@@ -68,6 +71,22 @@ export default function MediaUploader({ ownerType, ownerId, onUploaded }) {
       setError(err.message || 'Delete failed.');
     } finally {
       setBusy(false);
+      onBusyChange?.(false);
+    }
+  }
+
+  async function handleCover(mediaId) {
+    setBusy(true);
+    onBusyChange?.(true);
+    setError('');
+    try {
+      await makePrimaryMedia(mediaId);
+      await refresh();
+    } catch (err) {
+      setError(err.message || 'Could not update the public cover.');
+    } finally {
+      setBusy(false);
+      onBusyChange?.(false);
     }
   }
 
@@ -106,7 +125,10 @@ export default function MediaUploader({ ownerType, ownerId, onUploaded }) {
               <MediaImage src={item.url} alt="" loading="lazy" />
             )}
             <figcaption>
-              {item.is_primary && <span>Primary</span>}
+              <span>{item.media_type === 'video' ? 'Video' : 'Image'} ID: {item.media_id}</span>
+              {item.media_type === 'image' && item.is_primary && <span>Public cover</span>}
+              {item.media_type === 'image' && !item.is_primary && <button type="button" disabled={busy || loadFailed}
+                onClick={() => handleCover(item.media_id)}>Use as cover</button>}
               <button
                 type="button"
                 disabled={busy}

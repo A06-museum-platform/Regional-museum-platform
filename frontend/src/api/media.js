@@ -91,3 +91,7 @@ export function listMedia(ownerType, ownerId) {
 export function deleteMedia(mediaId) {
   return uploadFetch(`/staff/media/${mediaId}`, { method: 'DELETE' });
 }
+
+export function makePrimaryMedia(mediaId) {
+  return uploadFetch(`/staff/media/${mediaId}/primary`, { method: 'PATCH' });
+}

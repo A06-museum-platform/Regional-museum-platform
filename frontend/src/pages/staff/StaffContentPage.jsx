@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import useAsync from '../../hooks/useAsync';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
 import {
@@ -234,6 +235,7 @@ export default function StaffContentPage() {
                 <tr key={exhibition.id}>
                   <td>
                     <div className={styles.title}>{exhibition.title}</div>
+                    <div className={styles.meta}>Record ID: {exhibition.id}</div>
                     <div className={styles.meta}>{exhibition.summary}</div>
                   </td>
                   <td>{galleryLabel(exhibition.gallery)}</td>
@@ -246,6 +248,7 @@ export default function StaffContentPage() {
                   <td>{exhibition.item_count}</td>
                   <td><StatusPill value={exhibition.status} /></td>
                   <td className={styles.actions}>
+                    <Link to={`/staff/media?type=exhibition&id=${encodeURIComponent(exhibition.id)}`}>Manage images</Link>
                     <Button size="sm" variant="ghost" onClick={() => togglePublish(exhibition)}>
                       {exhibition.status === 'published' ? 'Unpublish' : 'Publish'}
                     </Button>
