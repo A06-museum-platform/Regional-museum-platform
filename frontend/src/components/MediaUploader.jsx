@@ -15,11 +15,14 @@ export default function MediaUploader({ ownerType, ownerId, onUploaded }) {
   const [items, setItems] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [loadFailed, setLoadFailed] = useState(false);
 
   async function refresh() {
     try {
       setItems(await listMedia(ownerType, ownerId));
+      setLoadFailed(false);
     } catch (err) {
+      setLoadFailed(true);
       setError(err.message || 'Could not load media.');
     }
   }
@@ -27,9 +30,9 @@ export default function MediaUploader({ ownerType, ownerId, onUploaded }) {
   useEffect(() => {
     let active = true;
     listMedia(ownerType, ownerId).then((media) => {
-      if (active) setItems(media);
+      if (active) { setItems(media); setLoadFailed(false); }
     }).catch((err) => {
-      if (active) { setItems([]); setError(err.message || 'Could not load media.'); }
+      if (active) { setItems([]); setLoadFailed(true); setError(err.message || 'Could not load media.'); }
     });
     return () => { active = false; };
   }, [ownerType, ownerId]);
@@ -73,7 +76,7 @@ export default function MediaUploader({ ownerType, ownerId, onUploaded }) {
       <div className={styles.row}>
         <button
           type="button"
-          disabled={busy || items === null}
+          disabled={busy || items === null || loadFailed}
           onClick={() => inputRef.current?.click()}
         >
           {busy ? 'Uploading…' : 'Upload images'}
@@ -83,11 +86,17 @@ export default function MediaUploader({ ownerType, ownerId, onUploaded }) {
           type="file"
           hidden
           multiple
-          accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"
+          accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,.jpg,.jpeg,.png,.webp"
           onChange={handleFiles}
         />
       </div>
-      {error && <p className={styles.error}>{error}</p>}
+      {items === null && <p role="status">Loading media…</p>}
+      {error && <p className={styles.error} role="alert">{error}</p>}
+      {loadFailed && <button type="button" disabled={busy} onClick={async () => {
+        setBusy(true);setError('');
+        try { await refresh(); } finally { setBusy(false); }
+      }}>Retry loading media</button>}
+      <p>Images: JPG/JPEG, PNG or WebP. Convert HEIC photos before uploading.</p>
       <div className={styles.grid}>
         {(items ?? []).map((item) => (
           <figure key={item.media_id} className={styles.thumb}>

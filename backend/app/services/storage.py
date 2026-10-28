@@ -92,7 +92,8 @@ def validate_upload(
             code="FILE_TOO_LARGE",
         )
     ext = "." + (filename.rsplit(".", 1)[-1].lower() if "." in filename else "")
-    if ext != EXTENSION_BY_TYPE[content_type]:
+    extensions = {'.jpg', '.jpeg'} if content_type == 'image/jpeg' else {EXTENSION_BY_TYPE[content_type]}
+    if ext not in extensions:
         raise UploadRejected(
             f"File extension {ext or '(none)'} does not match content type {content_type}."
         )

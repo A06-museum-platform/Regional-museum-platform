@@ -15,7 +15,7 @@ const LANDING_BY_ROLE = {
 };
 
 export default function SignInPage() {
-  const { signIn } = useAuth();
+  const { signIn, sessionExpired } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -55,6 +55,7 @@ export default function SignInPage() {
           can do afterwards depends on your account.
         </p>
 
+        {sessionExpired && <p role="status">Your session ended. Please sign in again to continue.</p>}
         {error && <div className={styles.errorBox}>{error}</div>}
 
         <div className="field">

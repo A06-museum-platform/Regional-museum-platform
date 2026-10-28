@@ -77,7 +77,8 @@ export async function me() {
     return normaliseUser(await request('/auth/me'));
   } catch (error) {
     if (error.isUnauthenticated) {
-      clearToken();
+      // request() already invalidated only the token used by this request.
+      // Clearing again here could erase a newer login after a delayed 401.
       return null;
     }
     throw error;

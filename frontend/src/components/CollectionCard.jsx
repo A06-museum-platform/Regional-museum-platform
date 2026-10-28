@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import Pill from './Pill';
 import MediaImage from './MediaImage';
+import { catalogPhotoCredit } from '../utils/catalogPhotoCredit';
 import { galleryLabel, categoryLabel } from '../api/constants';
 import styles from './CollectionCard.module.css';
 
@@ -30,6 +31,7 @@ export default function CollectionCard({ item }) {
       <div className={styles.body}>
         <div className={styles.pills}>
           <Pill>{categoryLabel(item.category)}</Pill>
+          {catalogPhotoCredit(item.image_url) && <Pill>Reference photo</Pill>}
           {item.is_family_friendly && <Pill tone="lime">Ages 10–14</Pill>}
         </div>
         <h3 className={styles.title}>{item.title}</h3>

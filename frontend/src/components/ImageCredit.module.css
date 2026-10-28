@@ -1,0 +1,9 @@
+.credit {
+  border-left: 3px solid var(--c-muted);
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+.credit p { margin: 0.4rem 0; }
+.credit a { text-decoration: underline; }

@@ -15,6 +15,11 @@ def test_validate_jpeg_ok():
     assert validate_upload("photo.jpg", "image/jpeg", 1024, 5, 40) == "image"
 
 
+@pytest.mark.parametrize('filename', ['photo.jpeg', 'PHOTO.JPEG', 'PHOTO.JPG'])
+def test_validate_standard_jpeg_extensions(filename):
+    assert validate_upload(filename, 'image/jpeg', 1024, 5, 40) == 'image'
+
+
 def test_validate_mp4_ok():
     assert validate_upload("clip.mp4", "video/mp4", 1024, 5, 40) == "video"
 
