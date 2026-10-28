@@ -4,6 +4,7 @@ import { getCollectionItem, getRelatedItems } from '../../api/collections';
 import { galleryLabel, categoryLabel } from '../../api/constants';
 import CollectionCard from '../../components/CollectionCard';
 import MediaImage from '../../components/MediaImage';
+import ImageCredit from '../../components/ImageCredit';
 import EmptyState from '../../components/EmptyState';
 import Skeleton from '../../components/Skeleton';
 import Button from '../../components/Button';
@@ -95,6 +96,7 @@ export default function CollectionItemPage() {
           </div>
 
           <h1 className={styles.title}>{item.title}</h1>
+          <ImageCredit src={item.image_url} />
           <p className={styles.description}>{item.description}</p>
 
           <table className={styles.facts}>

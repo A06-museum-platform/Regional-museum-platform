@@ -41,7 +41,7 @@ export default function RoleGuard({ allow }) {
   // Not signed in at all -> 401 territory -> send them to sign in, and
   // remember where they were headed.
   if (!user) {
-    return <Navigate to="/signin" state={{ from: location.pathname }} replace />;
+    return <Navigate to="/signin" state={{ from: location.pathname + location.search }} replace />;
   }
 
   // Signed in but the wrong role -> 403 territory -> explain, do not redirect.

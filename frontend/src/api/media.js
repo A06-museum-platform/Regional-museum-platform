@@ -4,6 +4,7 @@
  * and the same ApiError shape as client.js.
  */
 import { ApiError, getToken } from './client.js';
+import { expireSession } from './session';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -49,10 +50,11 @@ async function uploadFetch(path, { method = 'GET', form } = {}) {
   if (response.status === 204) return null;
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
+    if (response.status === 401) expireSession(token);
     throw new ApiError({
       status: response.status,
       code: payload?.code ?? payload?.error?.code ?? 'UNKNOWN',
-      message: payload?.detail ?? payload?.error?.message,
+      message: typeof payload?.detail === 'string' ? payload.detail : payload?.error?.message,
     });
   }
   return payload;

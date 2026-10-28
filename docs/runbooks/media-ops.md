@@ -659,3 +659,36 @@ Apply 012 after a private backup and clone rehearsal before merging the
 release containing it. Check the real /api/collection-items route with
 page_size=1 (not /api/collections), and public event/exhibition reads. Account
 records and role assignments are outside this correction and stay unchanged.
+
+### Staff sign-in and upload errors
+
+Staff/Admin use their **website account**, not a personal Supabase account.
+The browser sends the website bearer token to FastAPI. FastAPI verifies the
+active account and role before its private server key writes to `museum-media`.
+Do not expose a service key or enable anonymous bucket writes to fix a 401.
+
+A missing/expired website session now returns the user to sign-in with a
+session-ended message and preserves the destination. Cross-tab sign-out is
+also reflected in the staff UI. A late 401 from an old request cannot erase a
+new login. A 403 leaves the session intact: investigate the account's actual
+server role instead. If listing media fails temporarily, retry loading before
+uploading, so an unknown existing primary image is never treated as absent.
+
+JPEG uploads accept both `.jpg` and `.jpeg` (case-insensitive). PNG and WebP
+are supported; convert HEIC first. After a successful upload, the media row
+stores its Supabase URL. R2 mirroring runs on the configured daily recovery
+workflow; browser read fallback requires that the matching object has already
+been mirrored. A newly uploaded image is not instantly protected by a daily
+job. See [reference catalog image credits](../media/reference-catalog-images.md)
+for the staged demonstration photos and deployment order.
+
+Isolated browser regressions (start the frontend with `VITE_API_BASE_URL=/api`
+on port 5179 and real API mode):
+
+```bash
+node tests/e2e/media_session.mjs
+```
+
+This test intercepts every API call and exercises valid uploads, missing or
+expired sessions, re-login, cross-tab logout, 403/503 behavior and delayed old
+401 responses. It never writes to hosted storage or modifies real accounts.
